@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import '../../i18n';
 import { LocalizedDocument } from './LocalizedDocument';
@@ -10,11 +10,11 @@ describe('LocalizedDocument', () => {
     expect(screen.getByText('Projects')).toBeInTheDocument();
   });
 
-  it('localizes dynamic dashboard labels and accessible attributes', () => {
+  it('localizes dynamic dashboard labels and accessible attributes', async () => {
     const { rerender } = render(<><LocalizedDocument /><span>4 members</span><button aria-label="Open Terminal">Terminal</button></>);
     expect(screen.getByText('4 miembros')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Abrir terminal' })).toBeInTheDocument();
     rerender(<><LocalizedDocument /><span>7 members</span><button aria-label="Open Terminal">Terminal</button></>);
-    expect(screen.getByText('7 miembros')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('7 miembros')).toBeInTheDocument());
   });
 });
