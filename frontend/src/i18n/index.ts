@@ -7,6 +7,13 @@ const initialLocale = storedLocale === 'en-US' || storedLocale === 'es-MX' ? sto
 
 void i18n.use(initReactI18next).init({ resources, lng: initialLocale, fallbackLng: FALLBACK_LOCALE, interpolation: { escapeValue: false }, returnNull: false });
 
+if (typeof document !== 'undefined') {
+  document.documentElement.lang = initialLocale;
+  i18n.on('languageChanged', (locale) => {
+    document.documentElement.lang = locale;
+  });
+}
+
 /** Persists and applies a supported locale. */
 export async function setCrewlyLocale(locale: 'es-MX' | 'en-US'): Promise<void> {
   window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
