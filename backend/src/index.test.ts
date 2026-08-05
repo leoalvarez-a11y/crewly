@@ -15,6 +15,7 @@
 
 import express from 'express';
 import request from 'supertest';
+import path from 'path';
 
 // ---------------------------------------------------------------------------
 // Helpers — replicate the exact route logic from CrewlyServer.configureRoutes()
@@ -35,6 +36,7 @@ function buildTestApp(
 	versionData?: { currentVersion: string; latestVersion: string | null; updateAvailable: boolean },
 ): express.Application {
 	const app = express();
+	app.use('/docs', express.static(path.join(process.cwd(), 'docs')));
 
 	// Health check (replicates CrewlyServer.configureRoutes health handler)
 	app.get('/health', (_req, res) => {
@@ -241,6 +243,14 @@ describe('CrewlyServer headless mode', () => {
 	// -----------------------------------------------------------------------
 
 	describe('frontend serving', () => {
+		it('serves the visual guide before the SPA catch-all', async () => {
+			const app = buildTestApp(false);
+			const res = await request(app).get('/docs/es/GUIA_DE_USO.md');
+
+			expect(res.status).toBe(200);
+			expect(res.text).toContain('# Guía práctica y visual de Crewly');
+		});
+
 		it('does not serve SPA catch-all in headless mode', async () => {
 			const app = buildTestApp(true);
 			const res = await request(app).get('/some-frontend-route');

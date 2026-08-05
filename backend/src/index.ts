@@ -1150,6 +1150,8 @@ void (async () => {
 			const projectRoot = findPackageRoot(__dirname);
 			const h5StaticPath = path.join(projectRoot, 'backend/src/static/h5');
 			this.app.use('/h5', express.static(h5StaticPath));
+			const docsStaticPath = path.join(projectRoot, 'docs');
+			this.app.use('/docs', express.static(docsStaticPath));
 		}
 
 		// Static files for frontend (skip in headless mode)

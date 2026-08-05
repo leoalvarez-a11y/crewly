@@ -24,6 +24,7 @@ vi.mock('./pages/Assignments', () => ({ Assignments: () => <div>Assignments Page
 vi.mock('./pages/ScheduledCheckins', () => ({ ScheduledCheckins: () => <div>Schedules & Cron Page</div> }));
 vi.mock('./pages/Factory', () => ({ Factory: () => <div>Factory Page</div> }));
 vi.mock('./pages/Settings', () => ({ Settings: () => <div>Settings Page</div> }));
+vi.mock('./pages/GuideViewer', () => ({ GuideViewer: () => <div>Guide Viewer Page</div> }));
 vi.mock('./pages/Marketplace', () => ({ default: () => <div>Marketplace Page</div> }));
 vi.mock('./pages/MarketplaceDetail', () => ({ default: () => <div>Marketplace Detail Page</div> }));
 vi.mock('./pages/SecurityOverview', () => ({ SecurityOverview: () => <div>Security Page</div> }));
@@ -45,6 +46,14 @@ vi.mock('./components/Chat-team/TeamChatRoute', () => ({
 }));
 
 describe('App routes', () => {
+	it('mounts the visual guide viewer from Help', async () => {
+		window.history.pushState({}, '', '/help/guide/GUIA_DE_USO');
+
+		render(<App />);
+
+		expect(await screen.findByText('Guide Viewer Page')).toBeInTheDocument();
+	});
+
   it('redirects /schedules to the scheduled check-ins page', async () => {
     window.history.pushState({}, '', '/schedules');
 

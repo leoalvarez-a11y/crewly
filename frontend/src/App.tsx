@@ -11,6 +11,7 @@ import { Triggers } from './pages/Triggers';
 import { Factory } from './pages/Factory';
 import { Settings } from './pages/Settings';
 import { Help } from './pages/Help';
+import { GuideViewer } from './pages/GuideViewer';
 import { LocalizedDocument } from './components/I18n/LocalizedDocument';
 import { TeamChatRoute } from './components/Chat-team/TeamChatRoute';
 import Marketplace from './pages/Marketplace';
@@ -79,6 +80,7 @@ function App() {
               <Route path="usage" element={<CostDashboard />} />
               <Route path="settings" element={<Settings />} />
               <Route path="help" element={<Help />} />
+              <Route path="help/guide/:slug" element={<GuideViewer />} />
               <Route path="pricing" element={<Pricing />} />
               <Route path="cloud" element={<CloudPortal />} />
               {/* V3 Request surface — `/tasks` is the canonical user-facing route per

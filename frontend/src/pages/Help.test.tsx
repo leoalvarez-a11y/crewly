@@ -6,7 +6,7 @@ import { Help } from './Help';
 describe('Help', () => {
   it('links the principal, module, and cost guides', () => {
     render(<Help />);
-    expect(screen.getByText('Guia principal')).toHaveAttribute('href', '/docs/es/GUIA_DE_USO.md');
+    expect(screen.getByText('Guia principal')).toHaveAttribute('href', '/help/guide/GUIA_DE_USO');
     expect(screen.getAllByRole('link').length).toBe(22);
   });
 });
