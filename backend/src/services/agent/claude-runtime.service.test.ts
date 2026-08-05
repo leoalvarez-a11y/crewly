@@ -75,6 +75,14 @@ describe('ClaudeRuntimeService', () => {
 		});
 	});
 
+	describe('isClaudeTrustPrompt', () => {
+		it('detects the current Claude Code workspace safety wording', () => {
+			const output = 'Quick safety check: Is this a project you created or one you trust?';
+
+			expect((service as any).isClaudeTrustPrompt(output)).toBe(true);
+		});
+	});
+
 	describe('getRuntimeErrorPatterns', () => {
 		it('should return Claude-specific error patterns', () => {
 			const patterns = service['getRuntimeErrorPatterns']();

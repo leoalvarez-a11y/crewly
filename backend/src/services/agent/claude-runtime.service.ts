@@ -66,6 +66,7 @@ export class ClaudeRuntimeService extends RuntimeAgentService {
 		const trustPatterns = [
 			'Do you trust the files',
 			'Is this a project you trust',
+			'project you created or one you trust',
 			'Yes, proceed',
 			'Trust this folder',
 			'trust this project',
