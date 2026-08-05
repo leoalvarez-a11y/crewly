@@ -70,6 +70,7 @@ function App() {
               <Route path="teams/:id" element={<TeamDetail />} />
               <Route path="assignments" element={<Assignments />} />
               <Route path="scheduled-checkins" element={<ScheduledCheckins />} />
+              <Route path="schedules" element={<Navigate to="/scheduled-checkins" replace />} />
               <Route path="triggers" element={<Triggers />} />
               <Route path="factory" element={<Factory />} />
               <Route path="marketplace" element={<Marketplace />} />

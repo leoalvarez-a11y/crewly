@@ -3,7 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useParams } from 'react-router-dom';
 
-const SAFE_GUIDE = /^[A-Z0-9-]+$/;
+const SAFE_GUIDE = /^[A-Z0-9_-]+$/;
 
 /** Renders a bundled Spanish guide and resolves its local images safely. */
 export const GuideViewer: React.FC = () => {
