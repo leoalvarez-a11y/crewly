@@ -14,6 +14,7 @@ import { OverflowMenu } from '@/components/UI/OverflowMenu';
 import { MemberAvatar } from '@/components/common/MemberAvatar';
 import { ConfirmDialog } from '@/components/UI/ConfirmDialog';
 import { formatRelativeTimeCompact } from '@/utils/time';
+import { useTranslation } from 'react-i18next';
 
 export interface TeamsGridCardProps {
   team: Team;
@@ -44,6 +45,7 @@ export const TeamsGridCard: React.FC<TeamsGridCardProps> = ({
   onOpenChat, onOpenWiki,
   isPinned, onTogglePin,
 }) => {
+  const { t, i18n } = useTranslation();
   const [showStopConfirm, setShowStopConfirm] = useState(false);
   const members = team.members || [];
   const avatars = members.slice(0, 3);
@@ -62,6 +64,19 @@ export const TeamsGridCard: React.FC<TeamsGridCardProps> = ({
   const handleStopClick = (e: React.MouseEvent) => { e.stopPropagation(); setShowStopConfirm(true); };
   const handleStopConfirm = () => { setShowStopConfirm(false); onStopTeam?.(team.id); };
 
+  const localizedRelativeTime = (timestamp: string): string => {
+    const value = formatRelativeTimeCompact(timestamp);
+    if (i18n.language !== 'es-MX') return value;
+    if (value === 'Just now') return t('dashboard.justNow');
+    let match = value.match(/^(\d+)m ago$/);
+    if (match) return t('dashboard.minutesAgo', { count: Number(match[1]) });
+    match = value.match(/^(\d+)h ago$/);
+    if (match) return t('dashboard.hoursAgo', { count: Number(match[1]) });
+    match = value.match(/^(\d+)d ago$/);
+    if (match) return t('dashboard.daysAgo', { count: Number(match[1]) });
+    return value;
+  };
+
   return (
     <>
       <div
@@ -73,9 +88,9 @@ export const TeamsGridCard: React.FC<TeamsGridCardProps> = ({
           <div className="flex items-center gap-2 min-w-0">
             <div className="text-lg font-semibold truncate">{team.name}</div>
             {hasActiveMembers ? (
-              <span className="shrink-0 px-2 py-0.5 text-xs font-medium rounded-full bg-green-500/10 text-green-400">Active</span>
+              <span className="shrink-0 px-2 py-0.5 text-xs font-medium rounded-full bg-green-500/10 text-green-400">{t('dashboard.active')}</span>
             ) : (
-              <span className="shrink-0 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-500/10 text-gray-400">Idle</span>
+              <span className="shrink-0 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-500/10 text-gray-400">{t('dashboard.idle')}</span>
             )}
           </div>
           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -122,20 +137,20 @@ export const TeamsGridCard: React.FC<TeamsGridCardProps> = ({
             if (isOrchestrator) {
               return (
                 <div className="flex items-center gap-2 text-text-secondary-dark text-sm mb-4" data-testid="system-team-label">
-                  <Network className="w-4 h-4" /><span>System team</span>
+                  <Network className="w-4 h-4" /><span>{t('dashboard.systemTeam')}</span>
                 </div>
               );
             }
             if (isHierarchical) {
               return (
                 <div className="flex items-center gap-2 text-text-secondary-dark text-sm mb-4" data-testid="parent-team-label">
-                  <GitBranch className="w-4 h-4" /><span>Parent team</span>
+                  <GitBranch className="w-4 h-4" /><span>{t('dashboard.parentTeam')}</span>
                 </div>
               );
             }
             return (
               <div className="flex items-center gap-2 text-amber-400/80 text-sm mb-4" data-testid="assign-project-cta">
-                <FolderOpen className="w-4 h-4" /><span>Assign a project to get started</span>
+                <FolderOpen className="w-4 h-4" /><span>{t('dashboard.assignProject')}</span>
               </div>
             );
           })()
@@ -148,12 +163,12 @@ export const TeamsGridCard: React.FC<TeamsGridCardProps> = ({
         {subTeamCount !== undefined && subTeamCount > 0 ? (
           <div className="flex items-center gap-2 text-text-secondary-dark text-sm mb-4">
             <Users className="w-4 h-4" />
-            <span>{subTeamCount} sub-team{subTeamCount !== 1 ? 's' : ''} &middot; {members.length} member{members.length !== 1 ? 's' : ''}</span>
+            <span>{t('dashboard.subteams', { count: subTeamCount })} &middot; {t('dashboard.members', { count: members.length })}</span>
           </div>
         ) : (
           <div className="flex items-center gap-2 text-text-secondary-dark text-sm mb-4">
             <Users className="w-4 h-4" />
-            <span>{members.length} member{members.length !== 1 ? 's' : ''}</span>
+            <span>{t('dashboard.members', { count: members.length })}</span>
           </div>
         )}
 
@@ -169,8 +184,8 @@ export const TeamsGridCard: React.FC<TeamsGridCardProps> = ({
             )}
           </div>
           {lastActivity && (
-            <div className="flex items-center gap-1 text-xs text-text-secondary-dark" title={`Last activity: ${new Date(lastActivity).toLocaleString()}`}>
-              <Clock className="w-3 h-3" /><span>{formatRelativeTimeCompact(lastActivity)}</span>
+            <div className="flex items-center gap-1 text-xs text-text-secondary-dark" title={t('dashboard.lastActivity', { date: new Date(lastActivity).toLocaleString(i18n.language === 'es-MX' ? 'es-MX' : 'en-US') })}>
+              <Clock className="w-3 h-3" /><span>{localizedRelativeTime(lastActivity)}</span>
             </div>
           )}
         </div>

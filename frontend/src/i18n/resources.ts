@@ -7,12 +7,14 @@ export const resources = {
     nav: { work: 'WORK', tools: 'TOOLS', system: 'SYSTEM', dashboard: 'Dashboard', projects: 'Projects', teams: 'Teams', missions: 'Missions', chat: 'Chat', wiki: 'Wiki', marketplace: 'Marketplace', triggers: 'Triggers', workItems: 'Work Items', requests: 'Requests', cloud: 'Cloud Portal', usage: 'Usage', security: 'Security', settings: 'Settings', help: 'Help', favorites: 'Favorites', collapse: 'Collapse' },
     settings: { title: 'Settings', subtitle: 'Configure Crewly behavior, providers, roles, and skills', general: 'General', roles: 'Roles', skills: 'Skills', integrations: 'Integrations', apiKeys: 'API Keys', credentials: 'Credentials', system: 'System', providers: 'Providers and costs' },
     help: { title: 'Help', subtitle: 'Step-by-step guides for every visible Crewly module' },
+    dashboard: { updated: 'Updated {{date}}', members_one: '{{count}} member', members_other: '{{count}} members', subteams_one: '{{count}} sub-team', subteams_other: '{{count}} sub-teams', active: 'Active', idle: 'Idle', systemTeam: 'System team', parentTeam: 'Parent team', assignProject: 'Assign a project to get started', lastActivity: 'Last activity: {{date}}', justNow: 'Just now', minutesAgo: '{{count}}m ago', hoursAgo: '{{count}}h ago', daysAgo: '{{count}}d ago' },
     common: { unavailable: 'Not available', yes: 'Yes', no: 'No' },
   } },
   'es-MX': { translation: {
     nav: { work: 'TRABAJO', tools: 'HERRAMIENTAS', system: 'SISTEMA', dashboard: 'Inicio', projects: 'Proyectos', teams: 'Equipos', missions: 'Misiones', chat: 'Chat', wiki: 'Wiki', marketplace: 'Marketplace', triggers: 'Automatizaciones', workItems: 'Elementos de trabajo', requests: 'Solicitudes', cloud: 'Nube', usage: 'Presupuestos y uso', security: 'Seguridad', settings: 'Configuracion', help: 'Ayuda', favorites: 'Favoritos', collapse: 'Contraer' },
     settings: { title: 'Configuracion', subtitle: 'Configura el comportamiento, proveedores, roles y skills de Crewly', general: 'General', roles: 'Roles', skills: 'Skills', integrations: 'Integraciones', apiKeys: 'Claves API', credentials: 'Credenciales', system: 'Sistema', providers: 'Proveedores y costos' },
     help: { title: 'Ayuda', subtitle: 'Guias paso a paso para cada modulo visible de Crewly' },
+    dashboard: { updated: 'Actualizado {{date}}', members_one: '{{count}} miembro', members_other: '{{count}} miembros', subteams_one: '{{count}} subequipo', subteams_other: '{{count}} subequipos', active: 'Activo', idle: 'Inactivo', systemTeam: 'Equipo del sistema', parentTeam: 'Equipo principal', assignProject: 'Asigna un proyecto para comenzar', lastActivity: 'Ultima actividad: {{date}}', justNow: 'Ahora mismo', minutesAgo: 'hace {{count}} min', hoursAgo: 'hace {{count}} h', daysAgo: 'hace {{count}} d' },
     common: { unavailable: 'No disponible', yes: 'Si', no: 'No' },
   } },
 } as const;

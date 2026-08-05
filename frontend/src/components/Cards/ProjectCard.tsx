@@ -2,6 +2,7 @@ import React from 'react';
 import { FolderOpen, Pin, PinOff } from 'lucide-react';
 import { Project, Team } from '@/types';
 import { OverflowMenu } from '@/components/UI/OverflowMenu';
+import { useTranslation } from 'react-i18next';
 
 interface ProjectCardProps {
   project: Project;
@@ -47,8 +48,9 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   progressLabel,
   progressBreakdown
 }) => {
+  const { t, i18n } = useTranslation();
   const teamCount = assignedTeams.length || Object.values(project.teams || {}).flat().length;
-  const lastUpdated = new Date(project.updatedAt).toLocaleDateString();
+  const lastUpdated = new Date(project.updatedAt).toLocaleDateString(i18n.language === 'es-MX' ? 'es-MX' : 'en-US');
   const statusColor = statusColors[project.status as keyof typeof statusColors] || statusColors.active;
 
   // Prefer showing the end of the path. Keep last 3 segments or last 40 chars.
@@ -155,7 +157,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
 
         {/* Updated Date */}
         <p className="text-sm text-text-secondary-dark">
-          Updated {lastUpdated}
+          {t('dashboard.updated', { date: lastUpdated })}
         </p>
       </div>
     </div>
