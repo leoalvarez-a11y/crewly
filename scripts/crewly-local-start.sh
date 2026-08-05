@@ -137,7 +137,7 @@ systemd-run --user \
   --property=Restart=no \
   --property="StandardOutput=append:${LOG_FILE}" \
   --property="StandardError=append:${LOG_FILE}" \
-  "${NODE_BIN}" "${CLI_PATH}" start --no-browser >/dev/null
+  "${NODE_BIN}" "${CLI_PATH}" start --no-browser >/dev/null 2>&1
 
 crewly_pid=""
 supervisor_ready=false
