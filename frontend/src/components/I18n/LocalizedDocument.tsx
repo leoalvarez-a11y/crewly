@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LEGACY_ES_MX_PHRASES } from '../../i18n/resources';
+import { translateLegacyEsMx } from '../../i18n/resources';
 
 const RAW_SELECTORS = 'pre, code, .xterm, [data-i18n-skip], [data-terminal], textarea, input';
 
@@ -16,12 +16,29 @@ export function LocalizedDocument(): null {
         const parent = node.parentElement;
         if (!parent || parent.closest(RAW_SELECTORS)) continue;
         const value = node.textContent?.trim();
-        if (value && LEGACY_ES_MX_PHRASES[value]) node.textContent = (node.textContent ?? '').replace(value, LEGACY_ES_MX_PHRASES[value]);
+        if (!value) continue;
+        const translated = translateLegacyEsMx(value);
+        if (translated !== value) node.textContent = (node.textContent ?? '').replace(value, translated);
+      }
+
+      const element = root.nodeType === Node.ELEMENT_NODE ? root as Element : root.parentElement;
+      const elements = element ? [element, ...Array.from(element.querySelectorAll('*'))] : [];
+      for (const candidate of elements) {
+        if (candidate.closest(RAW_SELECTORS)) continue;
+        for (const attribute of ['title', 'aria-label']) {
+          const value = candidate.getAttribute(attribute);
+          if (!value) continue;
+          const translated = translateLegacyEsMx(value);
+          if (translated !== value) candidate.setAttribute(attribute, translated);
+        }
       }
     };
     localize(document.body);
-    const observer = new MutationObserver((mutations) => mutations.forEach((mutation) => mutation.addedNodes.forEach(localize)));
-    observer.observe(document.body, { childList: true, subtree: true });
+    const observer = new MutationObserver((mutations) => mutations.forEach((mutation) => {
+      mutation.addedNodes.forEach(localize);
+      if (mutation.type === 'characterData') localize(mutation.target);
+    }));
+    observer.observe(document.body, { childList: true, characterData: true, subtree: true });
     return () => observer.disconnect();
   }, [i18n.language]);
   return null;

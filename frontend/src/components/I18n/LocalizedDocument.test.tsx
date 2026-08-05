@@ -9,4 +9,10 @@ describe('LocalizedDocument', () => {
     expect(screen.getByText('Proyectos')).toBeInTheDocument();
     expect(screen.getByText('Projects')).toBeInTheDocument();
   });
+
+  it('localizes dynamic dashboard labels and accessible attributes', () => {
+    render(<><LocalizedDocument /><span>4 members</span><button aria-label="Open Terminal">Terminal</button></>);
+    expect(screen.getByText('4 miembros')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Abrir terminal' })).toBeInTheDocument();
+  });
 });
