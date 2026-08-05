@@ -10,9 +10,15 @@ readonly LOG_FILE="${CREWLY_HOME}/logs/crewly-local.log"
 readonly DASHBOARD_URL="http://localhost:8787"
 readonly HEALTH_URL="${DASHBOARD_URL}/health"
 readonly CLI_PATH="${REPO_ROOT}/dist/cli/cli/src/index.js"
+readonly SYSTEMD_UNIT="crewly-local.service"
 
 pid="unknown"
 running="stopped"
+systemd_pid="$(systemctl --user show --property=MainPID --value "${SYSTEMD_UNIT}" 2>/dev/null || true)"
+if [[ "${systemd_pid}" =~ ^[1-9][0-9]*$ ]] && kill -0 "${systemd_pid}" 2>/dev/null; then
+  pid="${systemd_pid}"
+  running="running"
+fi
 if [[ -f "${PID_FILE}" ]]; then
   candidate="$(<"${PID_FILE}")"
   if [[ "${candidate}" =~ ^[0-9]+$ ]] && kill -0 "${candidate}" 2>/dev/null && [[ -r "/proc/${candidate}/cmdline" ]]; then

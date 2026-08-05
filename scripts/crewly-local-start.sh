@@ -10,6 +10,7 @@ readonly LOG_DIR="${CREWLY_HOME}/logs"
 readonly PID_FILE="${RUNTIME_DIR}/crewly-local.pid"
 readonly LOCK_DIR="${RUNTIME_DIR}/crewly-local-start.lock"
 readonly LOG_FILE="${LOG_DIR}/crewly-local.log"
+readonly SYSTEMD_UNIT="crewly-local.service"
 readonly DASHBOARD_URL="http://localhost:8787"
 readonly HEALTH_URL="${DASHBOARD_URL}/health"
 readonly CLI_PATH="${REPO_ROOT}/dist/cli/cli/src/index.js"
@@ -37,6 +38,11 @@ fi
 if [[ ! -f "${CLI_PATH}" || ! -f "${BACKEND_PATH}" || ! -f "${REPO_ROOT}/frontend/dist/index.html" ]]; then
   echo "ERROR: Crewly build is missing. Run npm run build in ${REPO_ROOT}." >&2
   exit 22
+fi
+
+if ! systemctl --user show-environment >/dev/null 2>&1; then
+  echo "ERROR: The zytto systemd user manager is not available in Ubuntu WSL2." >&2
+  exit 26
 fi
 
 health_ok() {
@@ -73,7 +79,10 @@ record_running_pid() {
   if [[ -f "${PID_FILE}" ]] && pid_matches_checkout "$(<"${PID_FILE}")"; then
     return 0
   fi
-  if pid="$(discover_supervisor_pid)"; then
+  pid="$(systemctl --user show --property=MainPID --value "${SYSTEMD_UNIT}" 2>/dev/null || true)"
+  if pid_matches_checkout "${pid}"; then
+    printf '%s\n' "${pid}" > "${PID_FILE}"
+  elif pid="$(discover_supervisor_pid)"; then
     printf '%s\n' "${pid}" > "${PID_FILE}"
   else
     rm -f "${PID_FILE}"
@@ -114,8 +123,30 @@ if [[ -f "${LOG_FILE}" ]] && (( $(stat -c '%s' "${LOG_FILE}") > 10485760 )); the
 fi
 
 cd "${REPO_ROOT}"
-nohup "$(command -v node)" "${CLI_PATH}" start --no-browser >>"${LOG_FILE}" 2>&1 </dev/null &
-crewly_pid=$!
+systemctl --user stop "${SYSTEMD_UNIT}" >/dev/null 2>&1 || true
+systemctl --user reset-failed "${SYSTEMD_UNIT}" >/dev/null 2>&1 || true
+systemd-run --user \
+  --unit="${SYSTEMD_UNIT%.service}" \
+  --collect \
+  --working-directory="${REPO_ROOT}" \
+  --setenv="CREWLY_HOME=${CREWLY_HOME}" \
+  --setenv="WEB_PORT=8787" \
+  --property=Restart=no \
+  --property="StandardOutput=append:${LOG_FILE}" \
+  --property="StandardError=append:${LOG_FILE}" \
+  "$(command -v node)" "${CLI_PATH}" start --no-browser >/dev/null
+
+crewly_pid=""
+for _ in $(seq 1 10); do
+  crewly_pid="$(systemctl --user show --property=MainPID --value "${SYSTEMD_UNIT}" 2>/dev/null || true)"
+  [[ "${crewly_pid}" =~ ^[1-9][0-9]*$ ]] && break
+  sleep 1
+done
+if ! pid_matches_checkout "${crewly_pid}"; then
+  echo "ERROR: The Crewly systemd user service did not create a valid supervisor process." >&2
+  systemctl --user status "${SYSTEMD_UNIT}" --no-pager >&2 || true
+  exit 27
+fi
 printf '%s\n' "${crewly_pid}" > "${PID_FILE}"
 echo "Starting Crewly (PID ${crewly_pid}); log: ${LOG_FILE}"
 
@@ -133,7 +164,7 @@ for _ in $(seq 1 "${START_TIMEOUT_SECONDS}"); do
   sleep 1
 done
 
-kill -TERM "${crewly_pid}" 2>/dev/null || true
+systemctl --user stop "${SYSTEMD_UNIT}" >/dev/null 2>&1 || true
 rm -f "${PID_FILE}"
 echo "ERROR: Crewly did not become healthy within ${START_TIMEOUT_SECONDS} seconds. See ${LOG_FILE}." >&2
 exit 25

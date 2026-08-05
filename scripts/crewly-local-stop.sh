@@ -9,6 +9,7 @@ readonly RUNTIME_DIR="${CREWLY_HOME}/run"
 readonly PID_FILE="${RUNTIME_DIR}/crewly-local.pid"
 readonly DASHBOARD_URL="http://localhost:8787"
 readonly HEALTH_URL="${DASHBOARD_URL}/health"
+readonly SYSTEMD_UNIT="crewly-local.service"
 readonly CLI_PATH="${REPO_ROOT}/dist/cli/cli/src/index.js"
 readonly BACKEND_PATH="${REPO_ROOT}/dist/backend/backend/src/index.js"
 
@@ -74,6 +75,17 @@ while IFS= read -r pid; do
     targets+=("${pid}")
   fi
 done < <(discover_owned_pids)
+
+if systemctl --user is-active --quiet "${SYSTEMD_UNIT}" 2>/dev/null; then
+  systemd_pid="$(systemctl --user show --property=MainPID --value "${SYSTEMD_UNIT}" 2>/dev/null || true)"
+  if [[ "${systemd_pid}" =~ ^[1-9][0-9]*$ ]] && owned_process_kind "${systemd_pid}" >/dev/null; then
+    if [[ ! " ${targets[*]:-} " == *" ${systemd_pid} "* ]]; then
+      targets+=("${systemd_pid}")
+    fi
+    echo "Stopping Crewly systemd user service (PID ${systemd_pid})."
+    systemctl --user stop "${SYSTEMD_UNIT}"
+  fi
+fi
 
 for pid in "${targets[@]}"; do
   if [[ "$(owned_process_kind "${pid}" 2>/dev/null || true)" == "supervisor" ]]; then
