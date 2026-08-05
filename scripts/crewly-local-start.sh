@@ -137,12 +137,16 @@ systemd-run --user \
   "$(command -v node)" "${CLI_PATH}" start --no-browser >/dev/null
 
 crewly_pid=""
+supervisor_ready=false
 for _ in $(seq 1 10); do
   crewly_pid="$(systemctl --user show --property=MainPID --value "${SYSTEMD_UNIT}" 2>/dev/null || true)"
-  [[ "${crewly_pid}" =~ ^[1-9][0-9]*$ ]] && break
+  if pid_matches_checkout "${crewly_pid}"; then
+    supervisor_ready=true
+    break
+  fi
   sleep 1
 done
-if ! pid_matches_checkout "${crewly_pid}"; then
+if [[ "${supervisor_ready}" != "true" ]]; then
   echo "ERROR: The Crewly systemd user service did not create a valid supervisor process." >&2
   systemctl --user status "${SYSTEMD_UNIT}" --no-pager >&2 || true
   exit 27
