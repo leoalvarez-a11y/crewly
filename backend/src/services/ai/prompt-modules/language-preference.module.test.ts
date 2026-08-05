@@ -1,6 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
-
-vi.mock('../../settings/settings.service.js', () => ({
+jest.mock('../../settings/settings.service.js', () => ({
   getSettingsService: () => ({
     getSettings: async () => ({ general: { agentLanguageInstruction: 'Responde en espanol.' } }),
   }),
