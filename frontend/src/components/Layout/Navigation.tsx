@@ -29,7 +29,7 @@ import {
 	Inbox,
 	Cloud,
 	BookOpen,
-	CircleHelp,
+	HelpCircle,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
@@ -94,7 +94,7 @@ const NAV_GROUPS: NavGroup[] = [
 			{ name: 'Usage', href: '/usage', icon: DollarSign },
 			{ name: 'Security', href: '/security', icon: Shield },
 			{ name: 'Settings', translationKey: 'nav.settings', href: '/settings', icon: Settings },
-			{ name: 'Help', translationKey: 'nav.help', href: '/help', icon: CircleHelp },
+			{ name: 'Help', translationKey: 'nav.help', href: '/help', icon: HelpCircle },
 		],
 	},
 ];
