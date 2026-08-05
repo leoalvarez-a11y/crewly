@@ -6,7 +6,7 @@ import { Help } from './Help';
 describe('Help', () => {
   it('links the principal, module, and cost guides', () => {
     render(<Help />);
-    expect(screen.getByText('Guia principal')).toHaveAttribute('href', '/help/guide/GUIA_DE_USO');
+    expect(screen.getByText('Guia interactiva con imagenes')).toHaveAttribute('href', '/docs/es/GUIA_INTERACTIVA.html');
     expect(screen.getAllByRole('link').length).toBe(22);
   });
 });

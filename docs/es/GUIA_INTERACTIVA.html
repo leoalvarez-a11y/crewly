@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="es-MX" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Guía interactiva y visual para aprender a usar todos los módulos de Crewly.">
+  <title>Guía interactiva de Crewly</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #080d16;
+      --panel: #101826;
+      --panel-2: #162133;
+      --line: #26344a;
+      --text: #edf3ff;
+      --muted: #9fb0c9;
+      --brand: #4f8cff;
+      --brand-2: #6ee7c7;
+      --warning: #f9c74f;
+      --danger: #ff7b8b;
+      --shadow: 0 22px 60px rgba(0, 0, 0, .32);
+      --radius: 18px;
+    }
+    [data-theme="light"] {
+      color-scheme: light;
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --panel-2: #edf3fb;
+      --line: #d5dfed;
+      --text: #142033;
+      --muted: #55657d;
+      --brand: #245fd6;
+      --brand-2: #087f69;
+      --warning: #9b6700;
+      --danger: #b72843;
+      --shadow: 0 20px 50px rgba(20, 32, 51, .12);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 80% -10%, rgba(79, 140, 255, .16), transparent 34rem),
+        radial-gradient(circle at -10% 38%, rgba(110, 231, 199, .10), transparent 28rem),
+        var(--bg);
+      color: var(--text);
+      font: 16px/1.65 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button, input { font: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    a { color: var(--brand); }
+    img { max-width: 100%; }
+    .skip { position: fixed; left: 1rem; top: -5rem; z-index: 100; padding: .7rem 1rem; background: var(--text); color: var(--bg); border-radius: 8px; }
+    .skip:focus { top: 1rem; }
+    .topbar {
+      position: sticky; top: 0; z-index: 40;
+      display: flex; align-items: center; gap: 1rem;
+      min-height: 68px; padding: .75rem 1.25rem;
+      background: color-mix(in srgb, var(--bg) 86%, transparent);
+      border-bottom: 1px solid var(--line); backdrop-filter: blur(18px);
+    }
+    .brand { display: flex; align-items: center; gap: .7rem; font-weight: 850; letter-spacing: .04em; white-space: nowrap; }
+    .brand-mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; color: white; background: linear-gradient(135deg, var(--brand), #7558ff); box-shadow: 0 8px 24px rgba(79,140,255,.35); }
+    .search-wrap { flex: 1; max-width: 620px; margin-inline: auto; }
+    #search { width: 100%; padding: .72rem 1rem; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; outline: none; }
+    #search:focus { border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 24%, transparent); }
+    .icon-btn { min-width: 42px; height: 42px; border: 1px solid var(--line); border-radius: 12px; color: var(--text); background: var(--panel); cursor: pointer; }
+    .layout { display: grid; grid-template-columns: 265px minmax(0, 1fr); min-height: calc(100vh - 68px); }
+    .sidebar { position: sticky; top: 68px; height: calc(100vh - 68px); overflow: auto; padding: 1rem; border-right: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 72%, transparent); }
+    .sidebar h2 { margin: .85rem .65rem .35rem; color: var(--muted); font-size: .72rem; letter-spacing: .13em; text-transform: uppercase; }
+    .nav-link { display: flex; align-items: center; gap: .65rem; width: 100%; padding: .65rem .75rem; margin: .15rem 0; border-radius: 10px; color: var(--muted); text-decoration: none; }
+    .nav-link:hover, .nav-link.active { color: var(--text); background: var(--panel-2); }
+    .nav-link.active { box-shadow: inset 3px 0 var(--brand); }
+    .main { min-width: 0; padding: clamp(1.25rem, 3vw, 3.2rem); }
+    .content { max-width: 1180px; margin: 0 auto; }
+    .hero { position: relative; overflow: hidden; padding: clamp(1.5rem, 5vw, 4rem); border: 1px solid var(--line); border-radius: 28px; background: linear-gradient(135deg, var(--panel), color-mix(in srgb, var(--brand) 11%, var(--panel))); box-shadow: var(--shadow); }
+    .hero::after { content: ""; position: absolute; right: -7rem; bottom: -9rem; width: 25rem; height: 25rem; border-radius: 50%; background: radial-gradient(circle, rgba(110,231,199,.22), transparent 65%); pointer-events: none; }
+    .eyebrow { display: inline-flex; padding: .35rem .65rem; border: 1px solid color-mix(in srgb, var(--brand) 45%, var(--line)); border-radius: 999px; color: var(--brand-2); font-size: .8rem; font-weight: 750; text-transform: uppercase; letter-spacing: .08em; }
+    h1 { max-width: 780px; margin: 1rem 0 .75rem; font-size: clamp(2rem, 5vw, 4.4rem); line-height: 1.03; letter-spacing: -.045em; }
+    h2 { margin: 3.5rem 0 1rem; font-size: clamp(1.55rem, 3vw, 2.35rem); letter-spacing: -.025em; }
+    h3 { margin: 0 0 .55rem; font-size: 1.12rem; }
+    .lead { max-width: 760px; color: var(--muted); font-size: clamp(1rem, 2vw, 1.2rem); }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 1.4rem; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; min-height: 44px; padding: .68rem 1rem; border: 1px solid var(--line); border-radius: 12px; color: var(--text); background: var(--panel-2); text-decoration: none; cursor: pointer; }
+    .btn.primary { border-color: transparent; color: white; background: linear-gradient(135deg, var(--brand), #7558ff); }
+    .btn:hover { transform: translateY(-1px); filter: brightness(1.06); }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: .8rem; margin-top: 1.7rem; }
+    .stat { padding: 1rem; border: 1px solid var(--line); border-radius: 14px; background: color-mix(in srgb, var(--panel) 78%, transparent); }
+    .stat strong { display: block; font-size: 1.5rem; }
+    .stat span { color: var(--muted); font-size: .83rem; }
+    .callout { margin: 1rem 0; padding: 1rem 1.1rem; border-left: 4px solid var(--brand); border-radius: 0 12px 12px 0; background: var(--panel); }
+    .callout.warning { border-color: var(--warning); }
+    .visual { margin: 1.25rem 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--panel); box-shadow: var(--shadow); }
+    .visual img { display: block; width: 100%; cursor: zoom-in; }
+    .visual figcaption { padding: .75rem 1rem; color: var(--muted); font-size: .88rem; border-top: 1px solid var(--line); }
+    .quick-flow { display: grid; grid-template-columns: repeat(6, 1fr); gap: .65rem; margin: 1.2rem 0; }
+    .flow-step { position: relative; padding: 1rem .75rem; text-align: center; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+    .flow-step:not(:last-child)::after { content: "→"; position: absolute; right: -.65rem; top: 50%; z-index: 2; transform: translate(50%,-50%); color: var(--brand-2); font-weight: 900; }
+    .flow-step b { display: block; color: var(--brand-2); }
+    .stepper { margin-top: 1.2rem; }
+    .step-tabs { display: flex; gap: .55rem; overflow-x: auto; padding: .35rem 0 .8rem; scrollbar-width: thin; }
+    .step-tab { flex: 0 0 auto; padding: .65rem .85rem; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: var(--panel); cursor: pointer; }
+    .step-tab[aria-selected="true"] { color: white; border-color: var(--brand); background: var(--brand); }
+    .step-panel { display: none; animation: reveal .25s ease both; }
+    .step-panel.active { display: block; }
+    @keyframes reveal { from { opacity: 0; transform: translateY(6px); } }
+    .panel-grid { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.35fr); gap: 1rem; align-items: start; }
+    .card { padding: 1.1rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+    .card p, .card li { color: var(--muted); }
+    .numbered { counter-reset: guide; list-style: none; padding: 0; }
+    .numbered li { position: relative; padding: .55rem 0 .55rem 2.6rem; }
+    .numbered li::before { counter-increment: guide; content: counter(guide); position: absolute; left: 0; top: .42rem; display: grid; place-items: center; width: 1.8rem; height: 1.8rem; border-radius: 50%; color: white; background: var(--brand); font-weight: 800; }
+    .modules { display: grid; grid-template-columns: repeat(3, 1fr); gap: .8rem; }
+    .module-card { min-height: 175px; padding: 1rem; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); transition: .2s ease; }
+    .module-card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--brand) 65%, var(--line)); box-shadow: 0 12px 30px rgba(0,0,0,.16); }
+    .module-card .icon { display: grid; place-items: center; width: 38px; height: 38px; margin-bottom: .7rem; border-radius: 11px; background: var(--panel-2); font-size: 1.15rem; }
+    .module-card p { margin: .25rem 0 .7rem; color: var(--muted); font-size: .9rem; }
+    .module-card a { font-size: .86rem; font-weight: 750; text-decoration: none; }
+    .module-card.hidden { display: none; }
+    .gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: .8rem; }
+    .gallery .visual { margin: 0; }
+    .checklist { display: grid; grid-template-columns: repeat(2, 1fr); gap: .65rem; }
+    .check { display: flex; align-items: flex-start; gap: .7rem; padding: .8rem; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); cursor: pointer; }
+    .check input { width: 1.15rem; height: 1.15rem; margin-top: .2rem; accent-color: var(--brand); }
+    .check.done span { color: var(--muted); text-decoration: line-through; }
+    .progress-shell { height: 12px; margin: .9rem 0 .35rem; overflow: hidden; border-radius: 99px; background: var(--panel-2); }
+    #progress { height: 100%; width: 0; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .25s ease; }
+    .faq details { margin: .55rem 0; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+    .faq summary { padding: .9rem 1rem; cursor: pointer; font-weight: 750; }
+    .faq details div { padding: 0 1rem 1rem; color: var(--muted); }
+    .lightbox { position: fixed; inset: 0; z-index: 90; display: none; place-items: center; padding: 1.25rem; background: rgba(2,5,10,.9); }
+    .lightbox.open { display: grid; }
+    .lightbox img { max-width: min(1500px, 96vw); max-height: 88vh; border: 1px solid #465a78; border-radius: 14px; box-shadow: 0 30px 90px #000; }
+    .lightbox button { position: absolute; top: 1rem; right: 1rem; width: 44px; height: 44px; border: 1px solid #60708a; border-radius: 50%; color: white; background: #101826; cursor: pointer; }
+    .empty-search { display: none; padding: 1rem; color: var(--muted); border: 1px dashed var(--line); border-radius: 12px; }
+    footer { margin-top: 4rem; padding: 2rem 0; color: var(--muted); border-top: 1px solid var(--line); }
+    @media (max-width: 1000px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: fixed; inset: 68px auto 0 0; z-index: 35; width: 280px; transform: translateX(-105%); transition: transform .25s ease; box-shadow: var(--shadow); }
+      .sidebar.open { transform: translateX(0); }
+      .menu-btn { display: inline-grid !important; }
+      .modules { grid-template-columns: repeat(2, 1fr); }
+      .quick-flow { grid-template-columns: repeat(3, 1fr); }
+      .flow-step:nth-child(3)::after { display: none; }
+    }
+    @media (max-width: 720px) {
+      .topbar { gap: .55rem; padding-inline: .65rem; }
+      .brand span:last-child { display: none; }
+      .main { padding: 1rem; }
+      .stats, .modules, .gallery, .checklist, .panel-grid { grid-template-columns: 1fr; }
+      .quick-flow { grid-template-columns: repeat(2, 1fr); }
+      .flow-step:nth-child(2n)::after { display: none; }
+      .hero { border-radius: 20px; }
+    }
+    .menu-btn { display: none; place-items: center; }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#contenido">Saltar al contenido</a>
+  <header class="topbar">
+    <button class="icon-btn menu-btn" id="menuButton" aria-label="Abrir navegación">☰</button>
+    <div class="brand"><span class="brand-mark">C</span><span>Crewly · Guía visual</span></div>
+    <div class="search-wrap"><input id="search" type="search" placeholder="Buscar un módulo: equipos, Wiki, costos..." aria-label="Buscar módulos"></div>
+    <button class="icon-btn" id="themeButton" aria-label="Cambiar tema" title="Cambiar tema">◐</button>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar" id="sidebar" aria-label="Índice de la guía">
+      <h2>Comenzar</h2>
+      <a class="nav-link active" href="#inicio">⌂ Inicio de la guía</a>
+      <a class="nav-link" href="#ruta">➜ Ruta rápida</a>
+      <a class="nav-link" href="#pasos">◎ Paso a paso</a>
+      <h2>Módulos</h2>
+      <a class="nav-link" href="#modulos">▦ Todos los menús</a>
+      <a class="nav-link" href="#configuracion">⚙ Configuración</a>
+      <a class="nav-link" href="#supervision">◉ Supervisión y QA</a>
+      <a class="nav-link" href="#conocimiento">◇ Wiki y memoria</a>
+      <h2>Terminar</h2>
+      <a class="nav-link" href="#checklist">✓ Checklist</a>
+      <a class="nav-link" href="#problemas">? Problemas frecuentes</a>
+      <a class="nav-link" href="GUIA_DE_USO.md">Documento completo</a>
+    </aside>
+
+    <main class="main" id="contenido">
+      <div class="content">
+        <section class="hero" id="inicio">
+          <span class="eyebrow">Guía interactiva · Español de México</span>
+          <h1>Aprende Crewly con un recorrido visual</h1>
+          <p class="lead">Desde abrir la interfaz hasta coordinar un equipo mixto Claude + Codex, verificar QA, consultar la Wiki y controlar el consumo.</p>
+          <div class="hero-actions">
+            <a class="btn primary" href="#pasos">Comenzar el recorrido</a>
+            <a class="btn" href="#modulos">Explorar todos los módulos</a>
+            <a class="btn" href="http://localhost:8787" target="_blank" rel="noreferrer">Abrir Crewly</a>
+          </div>
+          <div class="stats">
+            <div class="stat"><strong>9</strong><span>pasos prácticos</span></div>
+            <div class="stat"><strong>15</strong><span>menús laterales</span></div>
+            <div class="stat"><strong>8</strong><span>áreas de configuración</span></div>
+            <div class="stat"><strong>13</strong><span>capturas reales</span></div>
+          </div>
+        </section>
+
+        <section id="ruta">
+          <h2>La ruta más sencilla</h2>
+          <p>Si es tu primera vez, sigue este orden. Cada bloque depende del anterior.</p>
+          <div class="quick-flow" aria-label="Flujo recomendado">
+            <div class="flow-step"><b>1</b>Configurar</div>
+            <div class="flow-step"><b>2</b>Proyecto</div>
+            <div class="flow-step"><b>3</b>Equipo</div>
+            <div class="flow-step"><b>4</b>Solicitar</div>
+            <div class="flow-step"><b>5</b>Verificar</div>
+            <div class="flow-step"><b>6</b>Entregar</div>
+          </div>
+          <div class="callout"><strong>Regla clave:</strong> que un CLI esté instalado no significa que esté autenticado. Confirma siempre <em>Autenticación disponible: Sí</em>.</div>
+          <figure class="visual">
+            <img src="assets/guia-visual/01-inicio.png" alt="Panel de Inicio de Crewly" data-lightbox>
+            <figcaption>Inicio resume proyectos, equipos, agentes activos, progreso y seguridad. Pulsa la imagen para ampliarla.</figcaption>
+          </figure>
+        </section>
+
+        <section id="pasos">
+          <h2>Recorrido paso a paso</h2>
+          <p>Selecciona un paso. Tu posición se conserva mientras navegas por esta página.</p>
+          <div class="stepper">
+            <div class="step-tabs" role="tablist" aria-label="Pasos de Crewly">
+              <button class="step-tab" role="tab" aria-selected="true" data-step="1">1 · Preparar</button>
+              <button class="step-tab" role="tab" aria-selected="false" data-step="2">2 · Proveedores</button>
+              <button class="step-tab" role="tab" aria-selected="false" data-step="3">3 · Proyecto</button>
+              <button class="step-tab" role="tab" aria-selected="false" data-step="4">4 · Equipo</button>
+              <button class="step-tab" role="tab" aria-selected="false" data-step="5">5 · Agentes</button>
+              <button class="step-tab" role="tab" aria-selected="false" data-step="6">6 · Solicitud</button>
+              <button class="step-tab" role="tab" aria-selected="false" data-step="7">7 · Supervisar</button>
+              <button class="step-tab" role="tab" aria-selected="false" data-step="8">8 · Conocimiento</button>
+              <button class="step-tab" role="tab" aria-selected="false" data-step="9">9 · Cerrar</button>
+            </div>
+
+            <article class="step-panel active" data-panel="1">
+              <div class="panel-grid">
+                <div class="card"><h3>Preparar Crewly</h3><ol class="numbered"><li>Abre el acceso directo de Crewly.</li><li>Confirma que carga <code>localhost:8787</code>.</li><li>Abre <strong>Configuración &gt; General</strong>.</li><li>Selecciona Español (México).</li><li>Define el runtime predeterminado y el máximo de agentes.</li></ol></div>
+                <figure class="visual"><img src="assets/guia-visual/08-configuracion.png" alt="Configuración general de Crewly" data-lightbox><figcaption>Idioma, instrucción global, runtime, concurrencia y comportamiento del chat.</figcaption></figure>
+              </div>
+            </article>
+
+            <article class="step-panel" data-panel="2">
+              <div class="panel-grid">
+                <div class="card"><h3>Verificar proveedores</h3><ol class="numbered"><li>Abre Proveedores y costos.</li><li>Busca Claude Code y Codex CLI.</li><li>Confirma instalación y autenticación.</li><li>Revisa la modalidad activa.</li><li>No inventes costos cuando diga “No disponible”.</li></ol></div>
+                <figure class="visual"><img src="assets/guia-visual/09-proveedores-costos.png" alt="Disponibilidad de Claude Code y Codex CLI" data-lightbox><figcaption>La disponibilidad se comprueba de forma real; las tarifas oficiales pueden cambiar.</figcaption></figure>
+              </div>
+            </article>
+
+            <article class="step-panel" data-panel="3">
+              <div class="panel-grid">
+                <div class="card"><h3>Crear un proyecto</h3><ol class="numbered"><li>Abre Proyectos.</li><li>Pulsa Crear proyecto o New Project.</li><li>Asigna nombre y carpeta.</li><li>Usa una ruta dentro de Ubuntu WSL, no <code>/mnt/c</code>.</li><li>Comprueba la tarjeta y su progreso.</li></ol></div>
+                <figure class="visual"><img src="assets/guia-visual/02-proyectos.png" alt="Listado de proyectos en Crewly" data-lightbox><figcaption>Un proyecto representa la carpeta real sobre la que trabajarán los agentes.</figcaption></figure>
+              </div>
+            </article>
+
+            <article class="step-panel" data-panel="4">
+              <div class="panel-grid">
+                <div class="card"><h3>Crear el equipo</h3><ol class="numbered"><li>Abre Equipos.</li><li>Pulsa Nuevo equipo o New Team.</li><li>Asigna el proyecto.</li><li>Activa modo jerárquico si habrá un líder.</li><li>Añade los miembros y guarda.</li></ol></div>
+                <figure class="visual"><img src="assets/guia-visual/13-crear-equipo.png" alt="Formulario para crear un equipo" data-lightbox><figcaption>El modo jerárquico permite que un Team Leader delegue y supervise.</figcaption></figure>
+              </div>
+            </article>
+
+            <article class="step-panel" data-panel="5">
+              <div class="panel-grid">
+                <div class="card"><h3>Configurar agentes</h3><p>Para cada miembro define rol, runtime, proveedor, modelo, fallback, tokens, presupuesto, skills y memoria.</p><ul><li>Líder: Claude Code.</li><li>Developer: Codex CLI con capacidad strong_coding.</li><li>QA: contexto independiente.</li><li>Documentación: memoria suplementaria opcional.</li></ul></div>
+                <figure class="visual"><img src="assets/guia-visual/12-detalle-equipo.png" alt="Detalle de equipo mixto Claude y Codex" data-lightbox><figcaption>El recibo de ejecución muestra runtime y modelo solicitados frente a los realmente ejecutados.</figcaption></figure>
+              </div>
+            </article>
+
+            <article class="step-panel" data-panel="6">
+              <div class="panel-grid">
+                <div class="card"><h3>Enviar una solicitud</h3><ol class="numbered"><li>Inicia el equipo.</li><li>Abre Chat y elige su canal.</li><li>Escribe objetivo, alcance, aceptación y restricciones.</li><li>Menciona al equipo si es necesario.</li><li>No incluyas secretos.</li></ol><div class="callout">Ejemplo: “Corrige la validación, agrega una prueba de borde, pide revisión independiente y documenta el resultado”.</div></div>
+                <figure class="visual"><img src="assets/guia-visual/05-chat.png" alt="Chat de equipos y agentes" data-lightbox><figcaption>Chat organiza canales, conversaciones directas y grupos multiagente.</figcaption></figure>
+              </div>
+            </article>
+
+            <article class="step-panel" data-panel="7">
+              <div class="panel-grid">
+                <div class="card"><h3>Supervisar y verificar</h3><ol class="numbered"><li>Confirma la entrada en Solicitudes.</li><li>Sigue delegaciones en Elementos de trabajo.</li><li>Abre la terminal <code>&gt;_</code>.</li><li>Comprueba comandos y pruebas reales.</li><li>Exige veredicto PASS o FAIL de QA.</li></ol></div>
+                <figure class="visual"><img src="assets/guia-visual/10-elementos-trabajo.png" alt="Ejecuciones y verificaciones" data-lightbox><figcaption>Distingue la tarea original de subtareas, delegaciones y verificaciones.</figcaption></figure>
+              </div>
+            </article>
+
+            <article class="step-panel" data-panel="8">
+              <div class="panel-grid">
+                <div class="card"><h3>Conservar conocimiento</h3><ul><li>Busca decisiones y patrones en Wiki.</li><li>Revisa la bóveda global, de proyecto o equipo.</li><li>Conserva memoria y Wiki nativas.</li><li>Usa Memory Layer externa sólo como suplemento.</li></ul></div>
+                <figure class="visual"><img src="assets/guia-visual/06-wiki.png" alt="Wiki nativa y bóvedas de conocimiento" data-lightbox><figcaption>Las carpetas canónicas pueden ser de sólo lectura en la interfaz.</figcaption></figure>
+              </div>
+            </article>
+
+            <article class="step-panel" data-panel="9">
+              <div class="panel-grid">
+                <div class="card"><h3>Cerrar correctamente</h3><ol class="numbered"><li>Revisa la respuesta final.</li><li>Confirma QA, pruebas y documentación.</li><li>Revisa tokens y costos registrados.</li><li>Detén el equipo para evitar consumo concurrente.</li><li>Consulta Seguridad y conserva la evidencia.</li></ol></div>
+                <figure class="visual"><img src="assets/guia-visual/11-ayuda.png" alt="Centro de ayuda de Crewly" data-lightbox><figcaption>Ayuda conserva las guías detalladas para cada módulo.</figcaption></figure>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section id="modulos">
+          <h2>Todos los menús y módulos</h2>
+          <p>Usa el buscador superior para filtrar estas tarjetas.</p>
+          <div class="empty-search" id="emptySearch">No encontré un módulo con ese texto.</div>
+          <div class="modules" id="moduleGrid">
+            <article class="module-card" data-search="inicio dashboard resumen agentes proyectos equipos seguridad"><span class="icon">⌂</span><h3>Inicio</h3><p>Resumen de agentes, proyectos, equipos, progreso y seguridad.</p><a href="01-INICIO-Y-DASHBOARD.md">Guía detallada →</a></article>
+            <article class="module-card" data-search="proyectos repositorios carpetas progreso"><span class="icon">▱</span><h3>Proyectos</h3><p>Registra la carpeta real de trabajo y consulta su progreso.</p><a href="02-PROYECTOS.md">Guía detallada →</a></article>
+            <article class="module-card" data-search="equipos agentes roles claude codex modelos"><span class="icon">◎</span><h3>Equipos</h3><p>Configura miembros, jerarquía, runtime, modelo y presupuesto.</p><a href="03-EQUIPOS.md">Guía detallada →</a></article>
+            <article class="module-card" data-search="misiones okr objetivos prioridad periodo estrategia"><span class="icon">◉</span><h3>Misiones</h3><p>Organiza objetivos estratégicos, prioridad, periodo y responsables.</p><a href="#misiones-visual">Ver imagen →</a></article>
+            <article class="module-card" data-search="chat canales mensajes solicitudes menciones"><span class="icon">▰</span><h3>Chat</h3><p>Habla con agentes, equipos y grupos multiagente.</p><a href="06-CHAT-Y-SOLICITUDES.md">Guía detallada →</a></article>
+            <article class="module-card" data-search="wiki conocimiento memoria decisiones patrones runbooks"><span class="icon">◇</span><h3>Wiki</h3><p>Navega conocimiento global, de proyecto y de equipo.</p><a href="11-WIKI-Y-BASE-DE-CONOCIMIENTO.md">Guía detallada →</a></article>
+            <article class="module-card" data-search="marketplace skills herramientas roles mcp instalar"><span class="icon">▦</span><h3>Marketplace</h3><p>Explora skills, roles, modelos y herramientas disponibles.</p><a href="12-SKILLS-Y-MARKETPLACE.md">Guía detallada →</a></article>
+            <article class="module-card" data-search="automatizaciones triggers eventos cron horarios señales"><span class="icon">◷</span><h3>Automatizaciones</h3><p>Programa tareas o reacciona a eventos del sistema.</p><a href="#automatizaciones-nota">Cómo usarlo →</a></article>
+            <article class="module-card" data-search="elementos trabajo work items ejecuciones delegaciones estados"><span class="icon">☷</span><h3>Elementos de trabajo</h3><p>Inspecciona cada ejecución, subtarea y verificación.</p><a href="07-TAREAS-Y-WORK-ITEMS.md">Guía detallada →</a></article>
+            <article class="module-card" data-search="solicitudes requests entrada trabajo urgente bloqueado"><span class="icon">▣</span><h3>Solicitudes</h3><p>Bandeja de trabajo entrante desde chat e integraciones.</p><a href="06-CHAT-Y-SOLICITUDES.md">Guía detallada →</a></article>
+            <article class="module-card" data-search="nube cloud relay dispositivos extensión móvil"><span class="icon">☁</span><h3>Nube</h3><p>Administra cloud opcional, relay, dispositivos y extensiones.</p><a href="16-CLOUD-RELAY-Y-MOVIL.md">Guía detallada →</a></article>
+            <article class="module-card" data-search="uso tokens costos presupuesto agentes consumo"><span class="icon">◔</span><h3>Uso</h3><p>Mide tokens, costos registrados y límites de presupuesto.</p><a href="13-PRESUPUESTOS-TOKENS-Y-COSTOS.md">Guía detallada →</a></article>
+            <article class="module-card" data-search="seguridad aislamiento datos aprobaciones auditoría"><span class="icon">◈</span><h3>Seguridad</h3><p>Revisa aislamiento, almacenamiento y aprobaciones de herramientas.</p><a href="14-LOGS-Y-SALUD.md">Guía relacionada →</a></article>
+            <article class="module-card" data-search="configuración idioma proveedores roles skills integraciones api keys credenciales sistema"><span class="icon">⚙</span><h3>Configuración</h3><p>Control central de idioma, runtimes, credenciales e integraciones.</p><a href="19-CONFIGURACION.md">Guía detallada →</a></article>
+            <article class="module-card" data-search="ayuda guías documentación solución problemas"><span class="icon">?</span><h3>Ayuda</h3><p>Índice de la guía principal y documentos por módulo.</p><a href="20-SOLUCION-DE-PROBLEMAS.md">Solución de problemas →</a></article>
+          </div>
+        </section>
+
+        <section id="configuracion">
+          <h2>Configuración sin confusiones</h2>
+          <div class="modules">
+            <div class="card"><h3>General</h3><p>Idioma, instrucción global, runtime, concurrencia, tiempos y terminal.</p></div>
+            <div class="card"><h3>Proveedores y costos</h3><p>Instalación, autenticación, versión y referencia oficial de precios.</p></div>
+            <div class="card"><h3>Roles</h3><p>Responsabilidad, prompt base y comportamiento esperado.</p></div>
+            <div class="card"><h3>Skills</h3><p>Habilidades disponibles, heredadas o asignadas.</p></div>
+            <div class="card"><h3>Integraciones</h3><p>Slack, WhatsApp y canales externos habilitados.</p></div>
+            <div class="card"><h3>API Keys</h3><p>Claves de proveedores cuando una suscripción no sea suficiente.</p></div>
+            <div class="card"><h3>Credenciales</h3><p>Credenciales reutilizables y su estado, sin mostrarlas en logs.</p></div>
+            <div class="card"><h3>Sistema</h3><p>Salud, mantenimiento, backups y opciones operativas.</p></div>
+          </div>
+          <div class="callout warning"><strong>Costos:</strong> Crewly muestra registros internos. Comprueba la facturación final en el portal oficial del proveedor.</div>
+        </section>
+
+        <section id="supervision">
+          <h2>Supervisión, QA y herramientas</h2>
+          <div class="gallery">
+            <figure class="visual" id="misiones-visual"><img src="assets/guia-visual/04-misiones.png" alt="Pantalla de Misiones" data-lightbox><figcaption>Misiones: objetivos, prioridades y periodos.</figcaption></figure>
+            <figure class="visual"><img src="assets/guia-visual/07-marketplace.png" alt="Pantalla de Marketplace" data-lightbox><figcaption>Marketplace: revisa requisitos antes de instalar.</figcaption></figure>
+            <figure class="visual"><img src="assets/guia-visual/03-equipos.png" alt="Vista de equipos" data-lightbox><figcaption>Equipos: inicia, detén, filtra y cambia la vista.</figcaption></figure>
+            <figure class="visual"><img src="assets/guia-visual/10-elementos-trabajo.png" alt="Pantalla de elementos de trabajo" data-lightbox><figcaption>Elementos de trabajo: evidencia de ejecución y QA.</figcaption></figure>
+          </div>
+          <div class="card" id="automatizaciones-nota"><h3>Automatizaciones</h3><p>Crea tareas por horario o señales por eventos como <code>task:verified</code>, <code>task:blocked</code> o <code>team:all_tasks_done</code>. Añade límites claros para evitar ciclos repetidos.</p></div>
+        </section>
+
+        <section id="conocimiento">
+          <h2>Wiki, memoria y documentación</h2>
+          <div class="panel-grid">
+            <div class="card"><h3>Tres capas distintas</h3><ul><li><strong>Wiki:</strong> contenido navegable y curado.</li><li><strong>Memoria nativa:</strong> decisiones, aprendizajes y patrones.</li><li><strong>Memory Layer:</strong> suplemento externo opcional.</li></ul><p>Nunca desactives Wiki o memoria nativas para usar una capa externa.</p></div>
+            <figure class="visual"><img src="assets/guia-visual/06-wiki.png" alt="Bóvedas de la Wiki" data-lightbox><figcaption>Selecciona la bóveda correcta antes de buscar una decisión o patrón.</figcaption></figure>
+          </div>
+        </section>
+
+        <section id="checklist">
+          <h2>Checklist de tu primera ejecución</h2>
+          <p>Marca cada punto. El progreso se guarda sólo en este navegador.</p>
+          <div class="progress-shell" aria-hidden="true"><div id="progress"></div></div>
+          <p id="progressText" aria-live="polite">0 de 12 completados</p>
+          <div class="checklist" id="checklistItems">
+            <label class="check"><input type="checkbox" data-check="1"><span>Crewly abre en localhost:8787.</span></label>
+            <label class="check"><input type="checkbox" data-check="2"><span>Idioma configurado como Español (México).</span></label>
+            <label class="check"><input type="checkbox" data-check="3"><span>Claude/Codex aparecen autenticados.</span></label>
+            <label class="check"><input type="checkbox" data-check="4"><span>Proyecto apunta a una ruta correcta en WSL.</span></label>
+            <label class="check"><input type="checkbox" data-check="5"><span>Equipo tiene roles y runtimes explícitos.</span></label>
+            <label class="check"><input type="checkbox" data-check="6"><span>Presupuestos y concurrencia están limitados.</span></label>
+            <label class="check"><input type="checkbox" data-check="7"><span>Chat recibió una tarea con aceptación.</span></label>
+            <label class="check"><input type="checkbox" data-check="8"><span>Elementos de trabajo muestra la ejecución.</span></label>
+            <label class="check"><input type="checkbox" data-check="9"><span>Terminal evidencia el runtime real.</span></label>
+            <label class="check"><input type="checkbox" data-check="10"><span>QA emitió PASS o FAIL independiente.</span></label>
+            <label class="check"><input type="checkbox" data-check="11"><span>Wiki y memoria permanecen activas.</span></label>
+            <label class="check"><input type="checkbox" data-check="12"><span>Equipo detenido después de terminar.</span></label>
+          </div>
+          <button class="btn" id="resetChecklist" type="button">Reiniciar checklist</button>
+        </section>
+
+        <section id="problemas" class="faq">
+          <h2>Problemas frecuentes</h2>
+          <details><summary>El runtime está instalado, pero no funciona</summary><div>Completa el login dentro de Ubuntu WSL2 y confirma en Proveedores y costos que la autenticación sea “Sí”.</div></details>
+          <details><summary>El agente no inicia</summary><div>Revisa el comando CLI en Configuración &gt; General y abre la terminal para ver el error real.</div></details>
+          <details><summary>La tarea no aparece</summary><div>Confirma el canal del equipo en Chat y después revisa Solicitudes y Elementos de trabajo.</div></details>
+          <details><summary>El modelo ejecutado no coincide</summary><div>Revisa selección automática/manual, capability class, fallback y recibo de ejecución.</div></details>
+          <details><summary>El costo dice “No disponible”</summary><div>Ese dato no fue entregado por el proveedor. No debe interpretarse como costo cero.</div></details>
+          <details><summary>Una parte aparece en inglés</summary><div>Algunas etiquetas o contenido de terceros pueden conservarse. Código, rutas, APIs y salida cruda no se traducen.</div></details>
+          <details><summary>Necesito más detalle</summary><div>Abre el documento completo o las guías individuales enlazadas en las tarjetas de módulos.</div></details>
+        </section>
+
+        <footer>
+          <strong>Guía interactiva de Crewly</strong><br>
+          Capturas reales de la instalación local. No contiene contraseñas, tokens ni claves. · <a href="GUIA_DE_USO.md">Abrir versión extensa en Markdown</a>
+        </footer>
+      </div>
+    </main>
+  </div>
+
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Imagen ampliada">
+    <button id="closeLightbox" aria-label="Cerrar imagen">×</button>
+    <img id="lightboxImage" alt="">
+  </div>
+
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const themeButton = document.querySelector('#themeButton');
+      const savedTheme = localStorage.getItem('crewly-guide-theme');
+      if (savedTheme === 'light' || savedTheme === 'dark') root.dataset.theme = savedTheme;
+      themeButton.addEventListener('click', () => {
+        root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+        localStorage.setItem('crewly-guide-theme', root.dataset.theme);
+      });
+
+      const sidebar = document.querySelector('#sidebar');
+      document.querySelector('#menuButton').addEventListener('click', () => sidebar.classList.toggle('open'));
+      sidebar.querySelectorAll('a').forEach(link => link.addEventListener('click', () => sidebar.classList.remove('open')));
+
+      const tabs = [...document.querySelectorAll('.step-tab')];
+      const panels = [...document.querySelectorAll('.step-panel')];
+      const activateStep = step => {
+        tabs.forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.step === step)));
+        panels.forEach(panel => panel.classList.toggle('active', panel.dataset.panel === step));
+        sessionStorage.setItem('crewly-guide-step', step);
+      };
+      tabs.forEach(tab => tab.addEventListener('click', () => activateStep(tab.dataset.step)));
+      activateStep(sessionStorage.getItem('crewly-guide-step') || '1');
+
+      const search = document.querySelector('#search');
+      const cards = [...document.querySelectorAll('.module-card')];
+      const emptySearch = document.querySelector('#emptySearch');
+      search.addEventListener('input', () => {
+        const query = search.value.trim().toLocaleLowerCase('es-MX');
+        let visible = 0;
+        cards.forEach(card => {
+          const match = !query || `${card.textContent} ${card.dataset.search}`.toLocaleLowerCase('es-MX').includes(query);
+          card.classList.toggle('hidden', !match);
+          if (match) visible += 1;
+        });
+        emptySearch.style.display = visible ? 'none' : 'block';
+        if (query) document.querySelector('#modulos').scrollIntoView({ block: 'start' });
+      });
+
+      const checks = [...document.querySelectorAll('[data-check]')];
+      const updateProgress = () => {
+        const done = checks.filter(item => item.checked).length;
+        document.querySelector('#progress').style.width = `${(done / checks.length) * 100}%`;
+        document.querySelector('#progressText').textContent = `${done} de ${checks.length} completados`;
+        checks.forEach(item => item.closest('.check').classList.toggle('done', item.checked));
+        localStorage.setItem('crewly-guide-checks', JSON.stringify(checks.map(item => item.checked)));
+      };
+      const savedChecks = JSON.parse(localStorage.getItem('crewly-guide-checks') || '[]');
+      checks.forEach((item, index) => { item.checked = Boolean(savedChecks[index]); item.addEventListener('change', updateProgress); });
+      document.querySelector('#resetChecklist').addEventListener('click', () => { checks.forEach(item => { item.checked = false; }); updateProgress(); });
+      updateProgress();
+
+      const lightbox = document.querySelector('#lightbox');
+      const lightboxImage = document.querySelector('#lightboxImage');
+      const closeLightbox = () => { lightbox.classList.remove('open'); document.body.style.overflow = ''; };
+      document.querySelectorAll('[data-lightbox]').forEach(image => image.addEventListener('click', () => {
+        lightboxImage.src = image.src;
+        lightboxImage.alt = image.alt;
+        lightbox.classList.add('open');
+        document.body.style.overflow = 'hidden';
+        document.querySelector('#closeLightbox').focus();
+      }));
+      document.querySelector('#closeLightbox').addEventListener('click', closeLightbox);
+      lightbox.addEventListener('click', event => { if (event.target === lightbox) closeLightbox(); });
+      document.addEventListener('keydown', event => { if (event.key === 'Escape') closeLightbox(); });
+
+      const navLinks = [...document.querySelectorAll('.nav-link[href^="#"]')];
+      const sections = navLinks.map(link => document.querySelector(link.getAttribute('href'))).filter(Boolean);
+      const observer = new IntersectionObserver(entries => {
+        const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (!visible) return;
+        navLinks.forEach(link => link.classList.toggle('active', link.getAttribute('href') === `#${visible.target.id}`));
+      }, { rootMargin: '-20% 0px -65% 0px', threshold: [0, .2, .5] });
+      sections.forEach(section => observer.observe(section));
+    })();
+  </script>
+</body>
+</html>
