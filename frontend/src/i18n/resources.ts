@@ -27,6 +27,7 @@ export const LEGACY_ES_MX_PHRASES: Readonly<Record<string, string>> = {
   'Mobile Access': 'Acceso movil', 'Scan with your phone': 'Escanea con tu telefono', 'Open QR code for mobile access': 'Abrir codigo QR para acceso movil', 'Scan QR code for mobile access': 'Escanea el codigo QR para acceso movil',
   Terminal: 'Terminal', Live: 'En vivo', 'Connecting...': 'Conectando...', 'Reconnecting...': 'Reconectando...', Disconnected: 'Desconectado', 'Session:': 'Sesion:',
   'Open Terminal': 'Abrir terminal', 'Close Terminal': 'Cerrar terminal', 'Loading dashboard...': 'Cargando inicio...', 'Just now': 'Ahora mismo',
+  'More options': 'Mas opciones', 'Collapse sidebar': 'Contraer barra lateral', 'Resize terminal panel': 'Cambiar tamano del panel de terminal',
 };
 
 /** Translates legacy dynamic labels that cannot be represented by an exact phrase key. */
@@ -49,5 +50,9 @@ export function translateLegacyEsMx(value: string): string {
   if (match) return `Actualizado ${match[1]}`;
   match = value.match(/^Last activity: (.+)$/);
   if (match) return `Ultima actividad: ${match[1]}`;
+  match = value.match(/^Open: (\d+), In progress: (\d+), Pending: (\d+), Done: (\d+), Blocked: (\d+)$/);
+  if (match) return `Abiertas: ${match[1]}, En progreso: ${match[2]}, Pendientes: ${match[3]}, Completadas: ${match[4]}, Bloqueadas: ${match[5]}`;
+  match = value.match(/^(.+)'s avatar$/);
+  if (match) return `Avatar de ${match[1]}`;
   return value;
 }

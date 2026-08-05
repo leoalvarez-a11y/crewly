@@ -10,16 +10,19 @@ export function LocalizedDocument(): null {
   useEffect(() => {
     if (i18n.language !== 'es-MX') return;
     const localize = (root: Node): void => {
+      const localizeTextNode = (textNode: Node): void => {
+        const parent = textNode.parentElement;
+        if (!parent || parent.closest(RAW_SELECTORS)) return;
+        const value = textNode.textContent?.trim();
+        if (!value) return;
+        const translated = translateLegacyEsMx(value);
+        if (translated !== value) textNode.textContent = (textNode.textContent ?? '').replace(value, translated);
+      };
+
+      if (root.nodeType === Node.TEXT_NODE) localizeTextNode(root);
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
       let node: Node | null;
-      while ((node = walker.nextNode())) {
-        const parent = node.parentElement;
-        if (!parent || parent.closest(RAW_SELECTORS)) continue;
-        const value = node.textContent?.trim();
-        if (!value) continue;
-        const translated = translateLegacyEsMx(value);
-        if (translated !== value) node.textContent = (node.textContent ?? '').replace(value, translated);
-      }
+      while ((node = walker.nextNode())) localizeTextNode(node);
 
       const element = root.nodeType === Node.ELEMENT_NODE ? root as Element : root.parentElement;
       const elements = element ? [element, ...Array.from(element.querySelectorAll('*'))] : [];
