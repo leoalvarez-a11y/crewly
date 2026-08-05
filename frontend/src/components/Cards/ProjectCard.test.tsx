@@ -7,10 +7,15 @@
  * @module components/Cards/ProjectCard.test
  */
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render as testingLibraryRender, screen, fireEvent } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { I18nextProvider } from 'react-i18next';
 import { ProjectCard } from './ProjectCard';
 import type { Project } from '@/types';
+import i18n from '@/i18n';
+
+const render: typeof testingLibraryRender = (ui, options) =>
+  testingLibraryRender(<I18nextProvider i18n={i18n}>{ui}</I18nextProvider>, options);
 
 // Mock lucide-react icons
 vi.mock('lucide-react', () => ({
@@ -50,7 +55,8 @@ function createProject(overrides: Partial<Project> = {}): Project {
 }
 
 describe('ProjectCard', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('en-US');
     vi.clearAllMocks();
     capturedMenuItems = [];
   });

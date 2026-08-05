@@ -7,10 +7,15 @@
  * @module components/Teams/TeamsGridCard.test
  */
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render as testingLibraryRender, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { I18nextProvider } from 'react-i18next';
 import { TeamsGridCard } from './TeamsGridCard';
 import type { Team } from '@/types';
+import i18n from '@/i18n';
+
+const render: typeof testingLibraryRender = (ui, options) =>
+  testingLibraryRender(<I18nextProvider i18n={i18n}>{ui}</I18nextProvider>, options);
 
 // Mock lucide-react icons
 vi.mock('lucide-react', () => ({
@@ -106,7 +111,8 @@ describe('TeamsGridCard', () => {
     onStopTeam: vi.fn(),
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('en-US');
     vi.clearAllMocks();
   });
 
