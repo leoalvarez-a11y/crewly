@@ -18,8 +18,18 @@ import {
   isValidApiKeyProvider,
   ApiKeyProvider,
 } from '../../types/settings.types.js';
+import { runtimeAvailabilityService } from '../../services/runtime/runtime-availability.service.js';
 
 const router = Router();
+
+/** GET /api/settings/providers returns secret-free runtime availability. */
+router.get('/providers', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.json({ success: true, data: await runtimeAvailabilityService.detect() });
+  } catch (error) {
+    next(error);
+  }
+});
 
 /** Timeout in milliseconds for API key validation requests */
 const API_KEY_TEST_TIMEOUT_MS = 10_000;

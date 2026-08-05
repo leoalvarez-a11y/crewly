@@ -29,7 +29,9 @@ import {
 	Inbox,
 	Cloud,
 	BookOpen,
+	CircleHelp,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { useSidebar } from '../../contexts/SidebarContext';
 import { IconButton } from '../UI';
@@ -44,6 +46,7 @@ import { usePinnedFavorites, type PinnedItem } from '../../hooks/usePinnedFavori
 /** A single navigation item */
 interface NavItem {
 	name: string;
+	translationKey?: string;
 	href: string;
 	icon: React.ComponentType<{ className?: string }>;
 }
@@ -64,9 +67,9 @@ const NAV_GROUPS: NavGroup[] = [
 	{
 		label: 'WORK',
 		items: [
-			{ name: 'Dashboard', href: '/', icon: Home },
-			{ name: 'Projects', href: '/projects', icon: FolderOpen },
-			{ name: 'Teams', href: '/teams', icon: Users },
+			{ name: 'Dashboard', translationKey: 'nav.dashboard', href: '/', icon: Home },
+			{ name: 'Projects', translationKey: 'nav.projects', href: '/projects', icon: FolderOpen },
+			{ name: 'Teams', translationKey: 'nav.teams', href: '/teams', icon: Users },
 			{ name: 'Missions', href: '/missions', icon: Target },
 			// Consolidated chat: one page for the orchestrator, agent DMs, and
 			// team channels. (Former separate /chat + /agents now redirect here.)
@@ -90,7 +93,8 @@ const NAV_GROUPS: NavGroup[] = [
 			{ name: 'Cloud Portal', href: '/cloud', icon: Cloud },
 			{ name: 'Usage', href: '/usage', icon: DollarSign },
 			{ name: 'Security', href: '/security', icon: Shield },
-			{ name: 'Settings', href: '/settings', icon: Settings },
+			{ name: 'Settings', translationKey: 'nav.settings', href: '/settings', icon: Settings },
+			{ name: 'Help', translationKey: 'nav.help', href: '/help', icon: CircleHelp },
 		],
 	},
 ];
@@ -117,6 +121,7 @@ const NavLinkItem: React.FC<{
 	isMobileOpen: boolean;
 	onClick: () => void;
 }> = ({ item, isCollapsed, isMobileOpen, onClick }) => {
+	const { t } = useTranslation();
 	const location = useLocation();
 	const isActive =
 		location.pathname === item.href ||
@@ -135,10 +140,10 @@ const NavLinkItem: React.FC<{
 					? 'bg-primary/10 text-primary font-semibold'
 					: 'text-text-secondary-dark hover:bg-background-dark hover:text-text-primary-dark'
 			)}
-			title={!showLabel ? item.name : undefined}
+			title={!showLabel ? t(item.translationKey ?? item.name) : undefined}
 		>
 			<item.icon className={clsx('h-5 w-5 flex-shrink-0', isActive ? 'text-primary' : '')} />
-			{showLabel && <span className="ml-3">{item.name}</span>}
+			{showLabel && <span className="ml-3">{t(item.translationKey ?? item.name)}</span>}
 		</NavLink>
 	);
 };

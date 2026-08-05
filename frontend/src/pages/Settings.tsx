@@ -12,7 +12,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Settings as SettingsIcon, User, Wrench, Link2, Key, Monitor, Lock, LucideIcon } from 'lucide-react';
+import { Settings as SettingsIcon, User, Wrench, Link2, Key, Monitor, Lock, BadgeDollarSign, LucideIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { GeneralTab } from '../components/Settings/GeneralTab';
 import { RolesTab } from '../components/Settings/RolesTab';
 import { SkillsTab } from '../components/Settings/SkillsTab';
@@ -20,11 +21,12 @@ import { IntegrationsTab } from '../components/Settings/IntegrationsTab';
 import { ApiKeysTab } from '../components/Settings/ApiKeysTab';
 import { CredentialsTab } from '../components/Settings/CredentialsTab';
 import { SystemTab } from '../components/Settings/SystemTab';
+import { ProviderCostsTab } from '../components/Settings/ProviderCostsTab';
 
 /**
  * Available settings tabs (Cloud removed -- consolidated to /cloud)
  */
-type SettingsTab = 'general' | 'roles' | 'skills' | 'integrations' | 'api-keys' | 'credentials' | 'system';
+type SettingsTab = 'general' | 'providers-costs' | 'roles' | 'skills' | 'integrations' | 'api-keys' | 'credentials' | 'system';
 
 /**
  * Tab configuration
@@ -36,7 +38,7 @@ interface TabConfig {
 }
 
 /** Valid tab IDs for URL parameter validation */
-const VALID_TABS: ReadonlySet<string> = new Set<SettingsTab>(['general', 'roles', 'skills', 'integrations', 'api-keys', 'credentials', 'system']);
+const VALID_TABS: ReadonlySet<string> = new Set<SettingsTab>(['general', 'providers-costs', 'roles', 'skills', 'integrations', 'api-keys', 'credentials', 'system']);
 
 /**
  * Settings page with tabbed navigation for managing Crewly configuration.
@@ -47,6 +49,7 @@ const VALID_TABS: ReadonlySet<string> = new Set<SettingsTab>(['general', 'roles'
  * @returns Settings page component
  */
 export const Settings: React.FC = () => {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const tabParam = searchParams.get('tab');
@@ -62,7 +65,8 @@ export const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
 
   const tabs: TabConfig[] = [
-    { id: 'general', label: 'General', icon: SettingsIcon },
+    { id: 'general', label: t('settings.general'), icon: SettingsIcon },
+    { id: 'providers-costs', label: t('settings.providers'), icon: BadgeDollarSign },
     { id: 'roles', label: 'Roles', icon: User },
     { id: 'skills', label: 'Skills', icon: Wrench },
     { id: 'integrations', label: 'Integrations', icon: Link2 },
@@ -78,6 +82,8 @@ export const Settings: React.FC = () => {
     switch (activeTab) {
       case 'general':
         return <GeneralTab />;
+      case 'providers-costs':
+        return <ProviderCostsTab />;
       case 'roles':
         return <RolesTab />;
       case 'skills':
@@ -99,9 +105,9 @@ export const Settings: React.FC = () => {
     <div className="max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t('settings.title')}</h1>
         <p className="text-sm text-text-secondary-dark mt-1">
-          Configure Crewly behavior and manage roles and skills
+          {t('settings.subtitle')}
         </p>
       </div>
 

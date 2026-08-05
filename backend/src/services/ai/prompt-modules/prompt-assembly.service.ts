@@ -32,6 +32,7 @@ import { RiskPolicyModule } from './risk-policy.module.js';
 import { TeamNormsModule } from './team-norms.module.js';
 import { WorkingMemoryModule } from './working-memory.module.js';
 import { ExternalMemoryLayerModule } from './external-memory-layer.module.js';
+import { LanguagePreferenceModule } from './language-preference.module.js';
 
 /**
  * Default total token budget for all prompt modules combined.
@@ -165,6 +166,7 @@ export class PromptAssemblyService {
 			new ExternalMemoryLayerModule(),
 			new ProjectReferenceModule(),
 			new CommunicationModule(),
+			new LanguagePreferenceModule(),
 			new DomainSOPModule(),
 			new TeamNormsModule(),
 			new UserProfileReferenceModule(),

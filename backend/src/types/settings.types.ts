@@ -28,6 +28,10 @@ export const AI_RUNTIMES: readonly AIRuntime[] = [
  * General application settings
  */
 export interface GeneralSettings {
+  /** Persisted user-interface locale. */
+  locale?: 'es-MX' | 'en-US';
+  /** Global language instruction appended to every agent prompt. */
+  agentLanguageInstruction?: string;
   /** Default AI runtime for new agents */
   defaultRuntime: AIRuntime;
 
@@ -336,6 +340,8 @@ export function isValidAIRuntime(value: string): value is AIRuntime {
 export function getDefaultSettings(): CrewlySettings {
   return {
     general: {
+      locale: 'es-MX',
+      agentLanguageInstruction: 'Responde y documenta en espanol de Mexico, excepto el codigo, las rutas, las APIs y los terminos tecnicos que deban conservarse.',
       defaultRuntime: 'claude-code',
       autoStartOrchestrator: true,
       autoRecoverHungOrchestrator: true,
@@ -408,6 +414,14 @@ export function validateSettings(settings: CrewlySettings): SettingsValidationRe
   // Validate general settings
   if (!isValidAIRuntime(settings.general.defaultRuntime)) {
     errors.push(`Invalid default runtime: ${settings.general.defaultRuntime}`);
+  }
+
+  if (settings.general.locale !== undefined && !['es-MX', 'en-US'].includes(settings.general.locale)) {
+    errors.push('locale must be es-MX or en-US');
+  }
+
+  if (settings.general.agentLanguageInstruction !== undefined && (typeof settings.general.agentLanguageInstruction !== 'string' || settings.general.agentLanguageInstruction.trim().length === 0)) {
+    errors.push('agentLanguageInstruction must be a non-empty string');
   }
 
   if (typeof settings.general.autoStartOrchestrator !== 'boolean') {

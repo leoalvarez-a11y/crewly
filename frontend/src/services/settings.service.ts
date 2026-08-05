@@ -11,6 +11,7 @@ import {
   CrewlySettings,
   UpdateSettingsInput,
   SettingsValidationResult,
+  RuntimeAvailability,
 } from '../types/settings.types';
 import { ApiResponse } from '../types';
 
@@ -21,6 +22,12 @@ const SETTINGS_API_BASE = '/api/settings';
  * Settings service for managing application settings via API
  */
 class SettingsService {
+  /** Gets secret-free provider runtime availability. */
+  async getProviderAvailability(): Promise<RuntimeAvailability[]> {
+    const response = await axios.get<ApiResponse<RuntimeAvailability[]>>(`${SETTINGS_API_BASE}/providers`);
+    if (!response.data.success || !response.data.data) throw new Error(response.data.error || 'Failed to get providers');
+    return response.data.data;
+  }
   /**
    * Get current settings
    *

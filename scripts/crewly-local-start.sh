@@ -133,7 +133,7 @@ systemd-run --user \
   --working-directory="${REPO_ROOT}" \
   --setenv="CREWLY_HOME=${CREWLY_HOME}" \
   --setenv="WEB_PORT=8787" \
-  --setenv="PATH=${NODE_DIR}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+  --setenv="PATH=/home/zytto/.local/bin:${NODE_DIR}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
   --property=Restart=no \
   --property="StandardOutput=append:${LOG_FILE}" \
   --property="StandardError=append:${LOG_FILE}" \

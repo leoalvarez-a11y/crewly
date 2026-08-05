@@ -16,6 +16,10 @@ export type AIRuntime = 'claude-code' | 'gemini-cli' | 'codex-cli' | 'crewly-age
  * General application settings
  */
 export interface GeneralSettings {
+  /** Persisted user-interface locale. */
+  locale?: 'es-MX' | 'en-US';
+  /** Global language instruction for agent responses and documentation. */
+  agentLanguageInstruction?: string;
   /** Default AI runtime for new agents */
   defaultRuntime: AIRuntime;
   /** Whether to auto-start the orchestrator on launch */
@@ -170,6 +174,16 @@ export interface UpdateSettingsInput {
 export interface SettingsValidationResult {
   valid: boolean;
   errors: string[];
+}
+
+export interface RuntimeAvailability {
+  provider: 'OpenAI' | 'Anthropic';
+  runtime: 'Codex CLI' | 'Claude Code';
+  installed: boolean;
+  authenticated: boolean;
+  status: 'installed_unauthenticated' | 'authenticated' | 'blocked_credentials' | 'blocked_installation' | 'unavailable';
+  version: string | null;
+  authenticationMode: string;
 }
 
 /**

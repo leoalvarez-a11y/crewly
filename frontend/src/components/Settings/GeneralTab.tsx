@@ -17,6 +17,7 @@ import { Card } from '../UI/Card';
 import { LoadingSpinner } from '../UI/LoadingSpinner';
 import { Toggle } from '../UI/Toggle';
 import { FormInput, FormLabel, FormSelect } from '../UI/Form';
+import { setCrewlyLocale } from '../../i18n';
 
 /**
  * Save status states
@@ -135,6 +136,13 @@ export const GeneralTab: React.FC = () => {
 
   return (
     <div className="space-y-8 max-w-3xl">
+      <Card padding="lg">
+        <h2 className="text-lg font-semibold mb-4 pb-3 border-b border-border-dark">Idioma</h2>
+        <div className="space-y-5">
+          <div><FormLabel htmlFor="locale">Idioma de la interfaz</FormLabel><FormSelect id="locale" value={localSettings.general.locale ?? 'es-MX'} onChange={(event) => { const locale = event.target.value as 'es-MX' | 'en-US'; handleChange('general', 'locale', locale); void setCrewlyLocale(locale); }}><option value="es-MX">Espanol (Mexico)</option><option value="en-US">English (United States)</option></FormSelect><p className="text-xs text-text-secondary-dark mt-1">La seleccion se guarda y usa ingles como respaldo.</p></div>
+          <div><FormLabel htmlFor="agentLanguageInstruction">Instruccion global para agentes</FormLabel><textarea id="agentLanguageInstruction" className="w-full min-h-24 rounded-md border border-border-dark bg-background-dark p-3" value={localSettings.general.agentLanguageInstruction ?? ''} onChange={(event) => handleChange('general', 'agentLanguageInstruction', event.target.value)} /><p className="text-xs text-text-secondary-dark mt-1">Los agentes responderan y documentaran en el idioma indicado; codigo y terminos tecnicos se conservan.</p></div>
+        </div>
+      </Card>
       {/* Runtime Settings Section */}
       <Card padding="lg">
         <h2 className="text-lg font-semibold mb-4 pb-3 border-b border-border-dark">Runtime Settings</h2>
