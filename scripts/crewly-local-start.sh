@@ -123,6 +123,8 @@ if [[ -f "${LOG_FILE}" ]] && (( $(stat -c '%s' "${LOG_FILE}") > 10485760 )); the
 fi
 
 cd "${REPO_ROOT}"
+readonly NODE_BIN="$(command -v node)"
+readonly NODE_DIR="$(dirname -- "${NODE_BIN}")"
 systemctl --user stop "${SYSTEMD_UNIT}" >/dev/null 2>&1 || true
 systemctl --user reset-failed "${SYSTEMD_UNIT}" >/dev/null 2>&1 || true
 systemd-run --user \
@@ -131,10 +133,11 @@ systemd-run --user \
   --working-directory="${REPO_ROOT}" \
   --setenv="CREWLY_HOME=${CREWLY_HOME}" \
   --setenv="WEB_PORT=8787" \
+  --setenv="PATH=${NODE_DIR}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
   --property=Restart=no \
   --property="StandardOutput=append:${LOG_FILE}" \
   --property="StandardError=append:${LOG_FILE}" \
-  "$(command -v node)" "${CLI_PATH}" start --no-browser >/dev/null
+  "${NODE_BIN}" "${CLI_PATH}" start --no-browser >/dev/null
 
 crewly_pid=""
 supervisor_ready=false
