@@ -17,6 +17,11 @@ readonly CLI_PATH="${REPO_ROOT}/dist/cli/cli/src/index.js"
 readonly BACKEND_PATH="${REPO_ROOT}/dist/backend/backend/src/index.js"
 readonly START_TIMEOUT_SECONDS=90
 
+memory_env_args=()
+if [[ -n "${CREWLY_EXTERNAL_MEMORY_URL:-}" ]]; then
+  memory_env_args+=(--setenv="CREWLY_EXTERNAL_MEMORY_URL=${CREWLY_EXTERNAL_MEMORY_URL}")
+fi
+
 mkdir -p "${RUNTIME_DIR}" "${LOG_DIR}"
 
 if [[ -s "/home/zytto/.nvm/nvm.sh" ]]; then
@@ -133,6 +138,7 @@ systemd-run --user \
   --working-directory="${REPO_ROOT}" \
   --setenv="CREWLY_HOME=${CREWLY_HOME}" \
   --setenv="WEB_PORT=8787" \
+  "${memory_env_args[@]}" \
   --setenv="PATH=/home/zytto/.local/bin:${NODE_DIR}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
   --property=Restart=no \
   --property="StandardOutput=append:${LOG_FILE}" \

@@ -13,6 +13,7 @@ grep -q 'START_TIMEOUT_SECONDS=90' "${REPO_ROOT}/scripts/crewly-local-start.sh"
 grep -q 'start --no-browser' "${REPO_ROOT}/scripts/crewly-local-start.sh"
 grep -q 'systemd-run --user' "${REPO_ROOT}/scripts/crewly-local-start.sh"
 grep -q '/home/zytto/.local/bin' "${REPO_ROOT}/scripts/crewly-local-start.sh"
+grep -q 'CREWLY_EXTERNAL_MEMORY_URL' "${REPO_ROOT}/scripts/crewly-local-start.sh"
 grep -q 'crewly_\*' "${REPO_ROOT}/scripts/crewly-local-stop.sh"
 grep -q 'branch:' "${REPO_ROOT}/scripts/crewly-local-status.sh"
 
