@@ -155,6 +155,19 @@ describe('TeamModel', () => {
       const team = TeamModel.fromJSON(data);
       expect(team.members[0].runtimeType).toBe('claude-code');
     });
+
+    it('should preserve optional per-agent model and memory configuration', () => {
+      const configured = makeMember({
+        runtimeType: 'codex-cli', provider: 'openai', modelSelectionMode: 'automatic',
+        capabilityClass: 'strong_coding', optionalFallbackModel: 'openai/fallback',
+        optionalBudget: { maxTokensPerTask: 5000, maxUsdPerTask: null }, memoryLayerEnabled: true,
+      });
+      const roundTrip = TeamModel.fromJSON(makeTeam({ members: [configured] })).toJSON();
+      expect(roundTrip.members[0]).toMatchObject({
+        provider: 'openai', runtimeType: 'codex-cli', capabilityClass: 'strong_coding',
+        optionalFallbackModel: 'openai/fallback', memoryLayerEnabled: true,
+      });
+    });
   });
 
   describe('fromJSON — legacy currentProject migration', () => {

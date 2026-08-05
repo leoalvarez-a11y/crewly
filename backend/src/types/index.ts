@@ -20,6 +20,45 @@ export type TeamMemberRole =
   | 'sales'
   | 'support';
 
+/** Provider names understood by the per-agent model policy. */
+export type AgentModelProvider = 'anthropic' | 'openai' | 'google' | 'deepseek' | 'ollama';
+
+/** Auditable capability classes used for automatic model selection. */
+export type CapabilityClass =
+  | 'fast_economical'
+  | 'balanced_reasoning'
+  | 'strong_coding'
+  | 'deep_reasoning'
+  | 'multimodal'
+  | 'long_context';
+
+/** Optional stricter per-agent budget. Missing values are intentionally unlimited. */
+export interface AgentExecutionBudget {
+  maxTokensPerTask?: number | null;
+  maxUsdPerTask?: number | null;
+}
+
+/** Sanitized, persisted record of the latest model-selection decision. */
+export interface AgentExecutionReceipt {
+  catalogVersion: string | null;
+  provider: AgentModelProvider | null;
+  requestedRuntime: TeamMember['runtimeType'];
+  executedRuntime: TeamMember['runtimeType'];
+  requestedModel: string | null;
+  executedModel: string | null;
+  capabilityClass: CapabilityClass | null;
+  selectionReason: 'manual_override' | 'template_override' | 'automatic_cheapest_sufficient' | 'native_default';
+  fallbackUsed: boolean;
+  fallbackClassification: string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  totalTokens: number | null;
+  costUsd: number | null;
+  memoryLayerConsulted: boolean;
+  memoryReferences: string[];
+  recordedAt: string;
+}
+
 export interface TeamMember {
   id: string;
   name: string;
@@ -32,6 +71,20 @@ export interface TeamMember {
   runtimeType: 'claude-code' | 'gemini-cli' | 'codex-cli' | 'crewly-agent'; // AI runtime to use
   /** Model ID for crewly-agent runtime (format: provider/modelId, e.g. google/gemini-3-flash-preview) */
   modelId?: string;
+  /** Explicit provider for the selected model. Legacy members may omit it. */
+  provider?: AgentModelProvider;
+  /** Manual uses modelId; automatic resolves the cheapest sufficient catalog entry. */
+  modelSelectionMode?: 'manual' | 'automatic';
+  /** Required capability when automatic model selection is enabled. */
+  capabilityClass?: CapabilityClass;
+  /** Optional provider/modelId used only after an eligible classified failure. */
+  optionalFallbackModel?: string;
+  /** Optional per-agent limit; it supplements rather than replaces the team budget. */
+  optionalBudget?: AgentExecutionBudget;
+  /** Enables supplementary ExternalMemoryLayerAdapter context. Defaults to false. */
+  memoryLayerEnabled?: boolean;
+  /** Latest sanitized execution decision and nullable telemetry. */
+  executionReceipt?: AgentExecutionReceipt;
   skillOverrides?: string[]; // Additional skill IDs beyond what the role provides
   excludedRoleSkills?: string[]; // Role skills to exclude for this specific member
   enableBrowserAutomation?: boolean; // Per-agent browser override (undefined = use global setting)
@@ -325,6 +378,14 @@ export interface TeamMemberConfig {
   systemPrompt: string;
   skillOverrides?: string[];
   excludedRoleSkills?: string[];
+  runtimeType?: TeamMember['runtimeType'];
+  modelId?: string;
+  provider?: AgentModelProvider;
+  modelSelectionMode?: 'manual' | 'automatic';
+  capabilityClass?: CapabilityClass;
+  optionalFallbackModel?: string;
+  optionalBudget?: AgentExecutionBudget;
+  memoryLayerEnabled?: boolean;
 }
 
 export interface TeamConfig {

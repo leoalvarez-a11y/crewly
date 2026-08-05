@@ -1,0 +1,45 @@
+{
+  "version": "2026-08-04.1",
+  "models": [
+    {
+      "provider": "openai",
+      "runtime": "codex-cli",
+      "modelId": "gpt-5.6-terra",
+      "supportedCapabilities": ["fast_economical", "balanced_reasoning", "strong_coding", "long_context"],
+      "contextWindow": null,
+      "nativeImageInput": false,
+      "relativeCostTier": 1,
+      "availability": true
+    },
+    {
+      "provider": "openai",
+      "runtime": "codex-cli",
+      "modelId": "gpt-5.6-sol",
+      "supportedCapabilities": ["balanced_reasoning", "strong_coding", "deep_reasoning", "multimodal", "long_context"],
+      "contextWindow": null,
+      "nativeImageInput": true,
+      "relativeCostTier": 2,
+      "availability": true
+    },
+    {
+      "provider": "anthropic",
+      "runtime": "claude-code",
+      "modelId": "claude-sonnet-4",
+      "supportedCapabilities": ["balanced_reasoning", "strong_coding", "multimodal", "long_context"],
+      "contextWindow": null,
+      "nativeImageInput": true,
+      "relativeCostTier": 2,
+      "availability": false
+    },
+    {
+      "provider": "google",
+      "runtime": "gemini-cli",
+      "modelId": "gemini-2.5-flash",
+      "supportedCapabilities": ["fast_economical", "balanced_reasoning", "multimodal", "long_context"],
+      "contextWindow": null,
+      "nativeImageInput": true,
+      "relativeCostTier": 1,
+      "availability": false
+    }
+  ]
+}

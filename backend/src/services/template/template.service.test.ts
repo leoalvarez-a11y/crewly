@@ -337,6 +337,24 @@ describe('TemplateService', () => {
         expect(member.workingStatus).toBe('idle');
       }
     });
+
+    it('should pin optional model policy and memory fields from a template role', () => {
+      const configured = createValidTemplateJson();
+      configured.roles[1].runtimeOverride = 'codex-cli';
+      configured.roles[1].provider = 'openai';
+      configured.roles[1].modelId = 'openai/pinned';
+      configured.roles[1].capabilityClass = 'strong_coding';
+      configured.roles[1].memoryLayerEnabled = true;
+      writeFileSync(join(tempDir, 'test-dev', 'template.json'), JSON.stringify(configured));
+      TemplateService.clearInstance();
+
+      const result = TemplateService.getInstance(tempDir).createTeamFromTemplate('test-dev', 'Configured Team');
+      const developer = result!.team.members.find(member => member.role === 'developer')!;
+      expect(developer).toMatchObject({
+        runtimeType: 'codex-cli', provider: 'openai', modelId: 'openai/pinned',
+        modelSelectionMode: 'manual', capabilityClass: 'strong_coding', memoryLayerEnabled: true,
+      });
+    });
   });
 
   describe('legacy template conversion', () => {

@@ -110,6 +110,13 @@ export interface CreateTeamMemberInput {
   role: TeamMemberRole;
   systemPrompt: string;
   runtimeType?: TeamMember['runtimeType'];
+  modelId?: TeamMember['modelId'];
+  provider?: TeamMember['provider'];
+  modelSelectionMode?: TeamMember['modelSelectionMode'];
+  capabilityClass?: TeamMember['capabilityClass'];
+  optionalFallbackModel?: TeamMember['optionalFallbackModel'];
+  optionalBudget?: TeamMember['optionalBudget'];
+  memoryLayerEnabled?: TeamMember['memoryLayerEnabled'];
   avatar?: string;
   skillOverrides?: string[];
   excludedRoleSkills?: string[];
@@ -231,6 +238,13 @@ export interface TeamMemberUpdate {
   role: string;
   systemPrompt: string;
   runtimeType?: 'claude-code' | 'gemini-cli' | 'codex-cli' | 'crewly-agent';
+  modelId?: TeamMember['modelId'];
+  provider?: TeamMember['provider'];
+  modelSelectionMode?: TeamMember['modelSelectionMode'];
+  capabilityClass?: TeamMember['capabilityClass'];
+  optionalFallbackModel?: TeamMember['optionalFallbackModel'];
+  optionalBudget?: TeamMember['optionalBudget'];
+  memoryLayerEnabled?: TeamMember['memoryLayerEnabled'];
   avatar?: string;
   skillOverrides?: string[];
   excludedRoleSkills?: string[];

@@ -170,6 +170,16 @@ export interface TemplateRole {
   promptAdditions?: string;
   /** AI runtime override for this role */
   runtimeOverride?: 'claude-code' | 'gemini-cli' | 'codex-cli' | 'crewly-agent';
+  /** Optional model pinned by the template. */
+  modelId?: string;
+  /** Optional provider pinned by the template. */
+  provider?: 'anthropic' | 'openai' | 'google' | 'deepseek' | 'ollama';
+  /** Optional automatic-selection capability class. */
+  capabilityClass?: 'fast_economical' | 'balanced_reasoning' | 'strong_coding' | 'deep_reasoning' | 'multimodal' | 'long_context';
+  /** Optional classified-failure fallback model. */
+  optionalFallbackModel?: string;
+  /** Whether supplementary external memory is enabled for this role. */
+  memoryLayerEnabled?: boolean;
   /** Whether to enable browser automation for this role */
   enableBrowser?: boolean;
 

@@ -129,12 +129,17 @@ export abstract class RuntimeAgentService {
 			let finalCommands = commands;
 			if (runtimeFlags && runtimeFlags.length > 0) {
 				const flagStr = runtimeFlags.join(' ');
-				finalCommands = commands.map(cmd =>
-					cmd.replace(
-						/--dangerously-skip-permissions/g,
-						`${flagStr} --dangerously-skip-permissions`,
-					),
-				);
+				finalCommands = commands.map((cmd) => {
+					if (cmd.includes('--dangerously-skip-permissions')) {
+						return cmd.replace(
+							/--dangerously-skip-permissions/g,
+							`${flagStr} --dangerously-skip-permissions`,
+						);
+					}
+					// Codex and Gemini use different permission flags. Append the
+					// already-sanitized runtime flags when the Claude marker is absent.
+					return `${cmd} ${flagStr}`;
+				});
 				this.logger.info('Injected runtime flags into init commands', {
 					sessionName,
 					flags: flagStr,

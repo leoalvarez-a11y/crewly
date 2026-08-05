@@ -12,6 +12,7 @@ import {
 } from '../session/index.js';
 import { RuntimeAgentService } from './runtime-agent.service.abstract.js';
 import { RuntimeServiceFactory } from './runtime-service.factory.js';
+import { ModelSelectionService } from './model-selection.service.js';
 import { CrewlyAgentExternalRuntimeService } from './crewly-agent/crewly-agent-external-runtime.service.js';
 import {
 	registerInProcessRuntime,
@@ -2510,14 +2511,19 @@ Loop until done, blocked, or explicitly reassigned:
 
 		// Resolve runtime flags from the agent's effective skills
 		let runtimeFlags: string[] = [];
+		let executionMember: TeamMember | undefined;
+		let executionTeam: Team | undefined;
+		let resolvedModelId: string | undefined;
 
 		// For team members, try to get runtime type from storage and resolve skill flags
 		if (!config.runtimeType && role !== ORCHESTRATOR_ROLE) {
 			try {
 				const teams = await this.storageService.getTeams();
 				for (const team of teams) {
-					const member = team.members?.find((m) => m.sessionName === sessionName);
+					const member = team.members?.find((m) => m.id === memberId || m.sessionName === sessionName);
 					if (member) {
+						executionMember = member;
+						executionTeam = team;
 						if (member.runtimeType) {
 							runtimeType = member.runtimeType as RuntimeType;
 						}
@@ -2540,8 +2546,10 @@ Loop until done, blocked, or explicitly reassigned:
 			try {
 				const teams = await this.storageService.getTeams();
 				for (const team of teams) {
-					const member = team.members?.find((m) => m.sessionName === sessionName);
+					const member = team.members?.find((m) => m.id === memberId || m.sessionName === sessionName);
 					if (member) {
+						executionMember = member;
+						executionTeam = team;
 						runtimeFlags = await this.resolveRuntimeFlags(
 							role, runtimeType, member.skillOverrides, member.excludedRoleSkills
 						);
@@ -2572,6 +2580,44 @@ Loop until done, blocked, or explicitly reassigned:
 						error: error instanceof Error ? error.message : String(error),
 					}
 				);
+			}
+		}
+
+		// Resolve and persist the auditable per-agent model decision. Legacy
+		// members yield native_default and receive no model flag.
+		if (executionMember && executionTeam) {
+			try {
+				const selection = await new ModelSelectionService().select(executionMember);
+				resolvedModelId = selection.receipt.executedModel ?? undefined;
+				runtimeFlags.push(...ModelSelectionService.runtimeModelFlags(runtimeType, resolvedModelId ?? null));
+				executionMember.executionReceipt = selection.receipt;
+				executionMember.updatedAt = new Date().toISOString();
+				if (typeof this.storageService.saveTeam === 'function') {
+					await this.storageService.saveTeam(executionTeam);
+				}
+				this.logger.info('Agent model selection resolved', {
+					sessionName,
+					provider: selection.receipt.provider,
+					requestedRuntime: selection.receipt.requestedRuntime,
+					executedRuntime: selection.receipt.executedRuntime,
+					requestedModel: selection.receipt.requestedModel,
+					executedModel: selection.receipt.executedModel,
+					capabilityClass: selection.receipt.capabilityClass,
+					selectionReason: selection.receipt.selectionReason,
+					fallbackUsed: selection.receipt.fallbackUsed,
+					tokens: null,
+					costUsd: null,
+				});
+			} catch (error) {
+				this.logger.error('Agent model selection failed', {
+					sessionName,
+					error: error instanceof Error ? error.message : String(error),
+				});
+				return {
+					success: false,
+					sessionName,
+					error: error instanceof Error ? error.message : String(error),
+				};
 			}
 		}
 
@@ -2780,7 +2826,7 @@ Loop until done, blocked, or explicitly reassigned:
 				//
 				// Without this orchestrator branch, the orchestrator's modelId would
 				// silently default to DEFAULT_MODEL even when configured.
-				let memberModelId: string | undefined;
+				let memberModelId: string | undefined = resolvedModelId;
 				if (config.memberId) {
 					try {
 						const teams = await this.storageService.getTeams();

@@ -425,6 +425,34 @@ echo "second command"
 			);
 		});
 
+		it('should append model flags for runtimes without the Claude permission marker', async () => {
+			const mockSettings = getDefaultSettings();
+			mockSettings.general.runtimeCommands['claude-code'] = 'codex -a never -s danger-full-access';
+			const settingsSpy = jest.spyOn(settingsServiceModule, 'getSettingsService').mockReturnValue({
+				getSettings: jest.fn().mockResolvedValue(mockSettings),
+			} as any);
+			jest.spyOn(service as any, 'getRuntimeConfig').mockReturnValue({
+				initScript: 'initialize_codex.sh',
+				displayName: 'Codex CLI',
+				welcomeMessage: 'Welcome',
+				timeout: 120000,
+				description: 'Codex CLI',
+			});
+			jest.spyOn(service as any, 'loadInitScript').mockResolvedValue([
+				'codex -a never -s danger-full-access',
+			]);
+			const sendCommandsSpy = jest.spyOn(service as any, 'sendShellCommandsToSession').mockResolvedValue(undefined);
+
+			await service.executeRuntimeInitScript('test-session', '/test/path', ['--model', 'gpt-5.6-sol']);
+
+			expect(sendCommandsSpy).toHaveBeenCalledWith(
+				'test-session',
+				['codex -a never -s danger-full-access --model gpt-5.6-sol'],
+				'/test/path',
+			);
+			settingsSpy.mockRestore();
+		});
+
 		it('should not modify commands when runtimeFlags is undefined', async () => {
 			jest.spyOn(service as any, 'getRuntimeConfig').mockReturnValue({
 				initScript: 'initialize_claude.sh',
