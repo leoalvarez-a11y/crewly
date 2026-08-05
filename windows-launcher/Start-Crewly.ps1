@@ -26,13 +26,19 @@ function Show-CrewlyError {
 }
 
 try {
+    $savedErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
     $kernel = (& wsl.exe -d $Distro -u $LinuxUser -- uname -r 2>&1 | Out-String).Trim()
-    if ($LASTEXITCODE -ne 0 -or $kernel -notmatch '(?i)(microsoft-standard-WSL2|WSL2)') {
+    $kernelExitCode = $LASTEXITCODE
+    $ErrorActionPreference = $savedErrorActionPreference
+    if ($kernelExitCode -ne 0 -or $kernel -notmatch '(?i)(microsoft-standard-WSL2|WSL2)') {
         throw "Ubuntu no existe como WSL2 o no se puede abrir como $LinuxUser. Resultado: $kernel"
     }
 
+    $ErrorActionPreference = 'Continue'
     $startOutput = (& wsl.exe -d $Distro -u $LinuxUser --cd $LinuxCheckout -- $LinuxStartScript 2>&1 | Out-String).Trim()
     $startExitCode = $LASTEXITCODE
+    $ErrorActionPreference = $savedErrorActionPreference
     "[$(Get-Date -Format o)]`r`n$startOutput" | Add-Content -LiteralPath $LauncherLog -Encoding UTF8
     if ($startExitCode -ne 0) {
         throw "Crewly devolvió el código $startExitCode.`n`n$startOutput`n`nRegistro: $LauncherLog"
