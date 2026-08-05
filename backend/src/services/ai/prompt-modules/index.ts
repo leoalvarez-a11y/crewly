@@ -35,6 +35,7 @@ export { RoleBoundaryModule } from './role-boundary.module.js';
 export { RequestContractModule } from './request-contract.module.js';
 export { DefaultExecutionLoopModule } from './default-execution-loop.module.js';
 export { WorkingMemoryModule } from './working-memory.module.js';
+export { ExternalMemoryLayerModule } from './external-memory-layer.module.js';
 
 // Context loaders
 export {

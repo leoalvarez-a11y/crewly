@@ -86,6 +86,12 @@ export interface ModuleConfig {
 	teamMission?: string;
 	/** Team budget configuration — injected so agents can respect cost constraints */
 	teamBudget?: { maxTokensPerDay?: number; maxUsdPerMonth?: number; alertThreshold?: number };
+	/** Whether supplementary external memory may be queried for this agent. */
+	memoryLayerEnabled?: boolean;
+	/** Minimal objective supplied to the external-memory query. */
+	memoryObjective?: string;
+	/** Minimal current task supplied to the external-memory query. */
+	memoryTask?: string;
 	/** Team quality gate — injected so agents know review requirements */
 	teamQualityGate?: { reviewerId?: string; autoApprove?: boolean; minQualityScore?: number };
 	/** Absolute path to team norms directory (from template application) */

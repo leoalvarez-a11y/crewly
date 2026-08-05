@@ -31,6 +31,7 @@ import { DomainSOPModule } from './domain-sop.module.js';
 import { RiskPolicyModule } from './risk-policy.module.js';
 import { TeamNormsModule } from './team-norms.module.js';
 import { WorkingMemoryModule } from './working-memory.module.js';
+import { ExternalMemoryLayerModule } from './external-memory-layer.module.js';
 
 /**
  * Default total token budget for all prompt modules combined.
@@ -161,6 +162,7 @@ export class PromptAssemblyService {
 			// must follow the mission card so the agent reads short-term
 			// "why-now" runtime context after the long-term mission frame.
 			new WorkingMemoryModule(),
+			new ExternalMemoryLayerModule(),
 			new ProjectReferenceModule(),
 			new CommunicationModule(),
 			new DomainSOPModule(),

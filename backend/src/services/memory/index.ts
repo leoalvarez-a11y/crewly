@@ -14,6 +14,8 @@ export { DailyLogService } from './daily-log.service.js';
 export { GoalTrackingService } from './goal-tracking.service.js';
 export { LearningAccumulationService } from './learning-accumulation.service.js';
 export { UserProfileService } from './user-profile.service.js';
+export { ExternalMemoryLayerAdapter } from './external-memory-layer.adapter.js';
+export type { ExternalMemoryQuery, ExternalMemoryReference, ExternalMemoryResult } from './external-memory-layer.adapter.js';
 
 // Re-export memory types for convenience
 export type {
