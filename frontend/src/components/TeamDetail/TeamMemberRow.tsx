@@ -100,6 +100,26 @@ export const TeamMemberRow: React.FC<TeamMemberRowProps> = ({ member, teamId, on
             )}
           </div>
           <div className="text-sm text-text-secondary-dark">Session: {member.sessionName || 'Inactive'}</div>
+          <div className="text-xs text-text-secondary-dark" data-testid="execution-summary">
+            {member.executionReceipt ? (
+              <>
+                {member.executionReceipt.provider || 'Provider unavailable'}
+                {' · Runtime: '}{member.executionReceipt.requestedRuntime} → {member.executionReceipt.executedRuntime}
+                {' · Model: '}{member.executionReceipt.requestedModel || member.capabilityClass || 'Runtime default'} → {member.executionReceipt.executedModel || 'Runtime default'}
+                {' · Capability: '}{member.executionReceipt.capabilityClass || 'No disponible'}
+                {' · Reason: '}{member.executionReceipt.selectionReason}
+                {' · Fallback: '}{member.executionReceipt.fallbackUsed ? member.executionReceipt.fallbackClassification || 'yes' : 'no'}
+                {' · Tokens: '}{member.executionReceipt.totalTokens ?? 'No disponible'}
+                {' · Cost: '}{member.executionReceipt.costUsd ?? 'No disponible'}
+                {' · Memory: '}{member.executionReceipt.memoryLayerConsulted ? 'yes' : 'no'}
+                {member.executionReceipt.memoryReferences.length > 0 && (
+                  <>{' · References: '}{member.executionReceipt.memoryReferences.join(', ')}</>
+                )}
+              </>
+            ) : (
+              <>{member.provider || 'Provider unavailable'} · {member.runtimeType} · {member.modelId || member.capabilityClass || 'Runtime default'}</>
+            )}
+          </div>
         </div>
       </div>
       <div className="flex items-center gap-3">

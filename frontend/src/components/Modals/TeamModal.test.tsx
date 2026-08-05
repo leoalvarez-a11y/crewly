@@ -203,6 +203,22 @@ describe('TeamModal Component', () => {
   });
 
   describe('Basic Rendering', () => {
+    it('shows minimal per-agent provider, model policy, budget, and memory controls', async () => {
+      const configuredTeam = {
+        ...mockTeam,
+        members: [{
+          ...mockTeam.members[0], runtimeType: 'codex-cli', provider: 'openai',
+          modelSelectionMode: 'automatic', capabilityClass: 'strong_coding', memoryLayerEnabled: true,
+        }],
+      };
+      render(<TeamModal {...defaultProps} team={configuredTeam} />);
+      expect(screen.getByLabelText('Provider')).toBeInTheDocument();
+      expect(screen.getByLabelText('Model Selection')).toBeInTheDocument();
+      expect(screen.getByLabelText('Capability Class')).toBeInTheDocument();
+      expect(screen.getByLabelText('Max Tokens / Task')).toBeInTheDocument();
+      expect(screen.getByText('Supplement with External Memory Layer')).toBeInTheDocument();
+    });
+
     it('should render modal when isOpen is true', async () => {
       await act(async () => {
         render(<TeamModal {...defaultProps} />);

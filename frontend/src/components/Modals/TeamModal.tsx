@@ -30,6 +30,12 @@ interface TeamMember {
   systemPrompt: string;
   runtimeType: 'claude-code' | 'gemini-cli' | 'codex-cli' | 'crewly-agent';
   modelId?: string; // AI model override for crewly-agent runtime
+  provider?: 'anthropic' | 'openai' | 'google' | 'deepseek' | 'ollama';
+  modelSelectionMode?: 'manual' | 'automatic';
+  capabilityClass?: 'fast_economical' | 'balanced_reasoning' | 'strong_coding' | 'deep_reasoning' | 'multimodal' | 'long_context';
+  optionalFallbackModel?: string;
+  optionalBudget?: { maxTokensPerTask?: number | null; maxUsdPerTask?: number | null };
+  memoryLayerEnabled?: boolean;
   avatar?: string;
   skillOverrides?: string[]; // Additional skill IDs beyond what the role provides
   excludedRoleSkills?: string[]; // Role skills to exclude for this specific member
@@ -230,13 +236,13 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSubmit,
     }));
   };
 
-  const handleMemberChange = (memberId: string, field: keyof TeamMember, value: string) => {
+  const handleMemberChange = (memberId: string, field: keyof TeamMember, value: string | boolean) => {
     setMembers(prev => prev.map(member => {
       if (member.id === memberId) {
         const updatedMember = { ...member, [field]: value };
 
         // Auto-update system prompt when role changes
-        if (field === 'role') {
+        if (field === 'role' && typeof value === 'string') {
           const selectedRole = availableRoles.find(role => role.key === value);
           if (selectedRole) {
             updatedMember.systemPrompt = `Load from ${selectedRole.promptFile}`;
@@ -252,6 +258,17 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSubmit,
       }
       return member;
     }));
+  };
+
+  /** Update one optional per-agent budget field without replacing the other limit. */
+  const handleBudgetChange = (memberId: string, field: 'maxTokensPerTask' | 'maxUsdPerTask', value: string) => {
+    setMembers(prev => prev.map(member => member.id === memberId ? {
+      ...member,
+      optionalBudget: {
+        ...member.optionalBudget,
+        [field]: value === '' ? null : Number(value),
+      },
+    } : member));
   };
 
   const avatarChoices = [
@@ -310,6 +327,13 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSubmit,
           role: member.role,
           systemPrompt: member.systemPrompt,
           runtimeType: member.runtimeType,
+          modelId: member.modelId || undefined,
+          provider: member.provider || undefined,
+          modelSelectionMode: member.modelSelectionMode || undefined,
+          capabilityClass: member.capabilityClass || undefined,
+          optionalFallbackModel: member.optionalFallbackModel || undefined,
+          optionalBudget: member.optionalBudget,
+          memoryLayerEnabled: member.memoryLayerEnabled || false,
           avatar: member.avatar,
           skillOverrides: member.skillOverrides || [],
           excludedRoleSkills: member.excludedRoleSkills || []
@@ -488,21 +512,74 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSubmit,
                       </div>
 
                       {/* AI Model Selection — only for crewly-agent runtime */}
-                      {member.runtimeType === 'crewly-agent' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <FormLabel htmlFor={`model-id-${index}`}>AI Model</FormLabel>
-                          <FormSelect
-                            id={`model-id-${index}`}
-                            value={member.modelId || ''}
-                            onChange={(e) => handleMemberChange(member.id, 'modelId', e.target.value)}
-                          >
-                            <option value="">Default</option>
-                            {SUPPORTED_MODELS.map(m => (
-                              <option key={m.id} value={m.id}>{m.label}</option>
-                            ))}
+                          <FormLabel htmlFor={`provider-${index}`}>Provider</FormLabel>
+                          <FormSelect id={`provider-${index}`} value={member.provider || ''} onChange={(e) => handleMemberChange(member.id, 'provider', e.target.value)}>
+                            <option value="">Runtime default</option>
+                            <option value="openai">OpenAI</option>
+                            <option value="anthropic">Anthropic</option>
+                            <option value="google">Google</option>
+                            <option value="deepseek">DeepSeek</option>
+                            <option value="ollama">Ollama</option>
                           </FormSelect>
                         </div>
+                        <div>
+                          <FormLabel htmlFor={`selection-mode-${index}`}>Model Selection</FormLabel>
+                          <FormSelect id={`selection-mode-${index}`} value={member.modelSelectionMode || 'manual'} onChange={(e) => handleMemberChange(member.id, 'modelSelectionMode', e.target.value)}>
+                            <option value="manual">Manual / runtime default</option>
+                            <option value="automatic">Automatic cheapest sufficient</option>
+                          </FormSelect>
+                        </div>
+                      </div>
+
+                      {member.modelSelectionMode === 'automatic' ? (
+                        <div>
+                          <FormLabel htmlFor={`capability-${index}`}>Capability Class</FormLabel>
+                          <FormSelect id={`capability-${index}`} value={member.capabilityClass || ''} onChange={(e) => handleMemberChange(member.id, 'capabilityClass', e.target.value)}>
+                            <option value="">Select capability</option>
+                            <option value="fast_economical">Fast economical</option>
+                            <option value="balanced_reasoning">Balanced reasoning</option>
+                            <option value="strong_coding">Strong coding</option>
+                            <option value="deep_reasoning">Deep reasoning</option>
+                            <option value="multimodal">Multimodal</option>
+                            <option value="long_context">Long context</option>
+                          </FormSelect>
+                        </div>
+                      ) : (
+                        <div>
+                          <FormLabel htmlFor={`model-id-${index}`}>AI Model</FormLabel>
+                          {member.runtimeType === 'crewly-agent' ? (
+                            <FormSelect id={`model-id-${index}`} value={member.modelId || ''} onChange={(e) => handleMemberChange(member.id, 'modelId', e.target.value)}>
+                              <option value="">Runtime default</option>
+                              {SUPPORTED_MODELS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+                            </FormSelect>
+                          ) : (
+                            <FormInput id={`model-id-${index}`} value={member.modelId || ''} onChange={(e) => handleMemberChange(member.id, 'modelId', e.target.value)} placeholder="provider/model-id (optional)" />
+                          )}
+                        </div>
                       )}
+
+                      <div>
+                        <FormLabel htmlFor={`fallback-model-${index}`}>Fallback Model</FormLabel>
+                        <FormInput id={`fallback-model-${index}`} value={member.optionalFallbackModel || ''} onChange={(e) => handleMemberChange(member.id, 'optionalFallbackModel', e.target.value)} placeholder="provider/model-id (optional)" />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <FormLabel htmlFor={`token-budget-${index}`}>Max Tokens / Task</FormLabel>
+                          <FormInput id={`token-budget-${index}`} type="number" min="0" value={member.optionalBudget?.maxTokensPerTask ?? ''} onChange={(e) => handleBudgetChange(member.id, 'maxTokensPerTask', e.target.value)} placeholder="No limit" />
+                        </div>
+                        <div>
+                          <FormLabel htmlFor={`cost-budget-${index}`}>Max USD / Task</FormLabel>
+                          <FormInput id={`cost-budget-${index}`} type="number" min="0" step="0.01" value={member.optionalBudget?.maxUsdPerTask ?? ''} onChange={(e) => handleBudgetChange(member.id, 'maxUsdPerTask', e.target.value)} placeholder="No limit" />
+                        </div>
+                      </div>
+
+                      <label className="flex items-center gap-2 text-sm text-text-primary-dark">
+                        <input type="checkbox" checked={member.memoryLayerEnabled || false} onChange={(e) => handleMemberChange(member.id, 'memoryLayerEnabled', e.target.checked)} />
+                        Supplement with External Memory Layer
+                      </label>
 
                       {/* Skills Section */}
                       {member.role && (

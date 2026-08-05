@@ -10,6 +10,31 @@ export interface TeamMember {
   workingStatus: 'idle' | 'in_progress'; // Activity level status
   runtimeType: 'claude-code' | 'gemini-cli' | 'codex-cli' | 'crewly-agent'; // AI runtime to use
   modelId?: string; // AI model override for crewly-agent runtime (format: provider/modelId)
+  provider?: 'anthropic' | 'openai' | 'google' | 'deepseek' | 'ollama';
+  modelSelectionMode?: 'manual' | 'automatic';
+  capabilityClass?: 'fast_economical' | 'balanced_reasoning' | 'strong_coding' | 'deep_reasoning' | 'multimodal' | 'long_context';
+  optionalFallbackModel?: string;
+  optionalBudget?: { maxTokensPerTask?: number | null; maxUsdPerTask?: number | null };
+  memoryLayerEnabled?: boolean;
+  executionReceipt?: {
+    catalogVersion: string | null;
+    provider: string | null;
+    requestedRuntime: TeamMember['runtimeType'];
+    executedRuntime: TeamMember['runtimeType'];
+    requestedModel: string | null;
+    executedModel: string | null;
+    capabilityClass: TeamMember['capabilityClass'] | null;
+    selectionReason: string;
+    fallbackUsed: boolean;
+    fallbackClassification: string | null;
+    inputTokens: number | null;
+    outputTokens: number | null;
+    totalTokens: number | null;
+    costUsd: number | null;
+    memoryLayerConsulted: boolean;
+    memoryReferences: string[];
+    recordedAt: string;
+  };
   skillOverrides?: string[]; // Additional skill IDs beyond what the role provides
   excludedRoleSkills?: string[]; // Role skills to exclude for this specific member
   currentTickets?: string[];

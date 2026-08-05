@@ -270,6 +270,32 @@ describe('TeamMemberRow', () => {
     });
   });
 
+  describe('execution observability', () => {
+    it('shows requested execution outcome and unavailable telemetry', () => {
+      const member = createTestMember({
+        provider: 'openai',
+        runtimeType: 'codex-cli',
+        executionReceipt: {
+          catalogVersion: 'test-v1', provider: 'openai', requestedRuntime: 'codex-cli',
+          executedRuntime: 'codex-cli', requestedModel: null, executedModel: 'openai/cheap',
+          capabilityClass: 'strong_coding', selectionReason: 'automatic_cheapest_sufficient',
+          fallbackUsed: false, fallbackClassification: null, inputTokens: null, outputTokens: null,
+          totalTokens: null, costUsd: null, memoryLayerConsulted: true,
+          memoryReferences: ['memory://fixture'], recordedAt: '2026-08-04T00:00:00.000Z',
+        },
+      });
+      render(<TeamMemberRow {...defaultProps} member={member} />);
+      const summary = screen.getByTestId('execution-summary');
+      expect(summary).toHaveTextContent('Runtime: codex-cli → codex-cli');
+      expect(summary).toHaveTextContent('Model: Runtime default → openai/cheap');
+      expect(summary).toHaveTextContent('Capability: strong_coding');
+      expect(summary).toHaveTextContent('Fallback: no');
+      expect(summary).toHaveTextContent('Tokens: No disponible');
+      expect(summary).toHaveTextContent('Memory: yes');
+      expect(summary).toHaveTextContent('References: memory://fixture');
+    });
+  });
+
   describe('loading state interactions', () => {
     it('should not allow multiple simultaneous start clicks', async () => {
       let resolveStart: () => void;
