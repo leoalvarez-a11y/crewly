@@ -3308,6 +3308,17 @@ Loop until done, blocked, or explicitly reassigned:
 				runtimeType = await this.resolveSessionRuntimeType(sessionName);
 			}
 
+			// A restored or newly-started PTY may already exist while its bootstrap
+			// prompt is still being delivered. Serialize every user/system message
+			// behind that bootstrap, not only the activate-on-send retry path.
+			const registrationReady = await this.waitForRegistrationDelivery(sessionName);
+			if (!registrationReady) {
+				return {
+					success: false,
+					error: 'Agent registration prompt delivery is still unconfirmed',
+				};
+			}
+
 			// ===== In-process Crewly Agent delivery =====
 			// Route directly to the in-process runtime, bypassing PTY entirely.
 			// Fire-and-forget: mirrors PTY runtimes where the write returns immediately.

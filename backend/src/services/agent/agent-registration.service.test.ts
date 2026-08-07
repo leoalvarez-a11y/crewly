@@ -2405,6 +2405,37 @@ describe('AgentRegistrationService', () => {
 			expect(result.success).toBe(false);
 			expect(mockSessionHelper.sendKey).toHaveBeenCalledWith('codex-session', 'C-u');
 		}, 120000);
+
+		it('waits for the registration prompt before writing a chat message', async () => {
+			let releaseRegistration!: (value: boolean) => void;
+			const registration = new Promise<boolean>((resolve) => {
+				releaseRegistration = resolve;
+			});
+			(service as any).registrationDeliveryPromises.set('codex-session', registration);
+			mockSessionHelper.capturePane
+				.mockReturnValueOnce('›\n')
+				.mockReturnValueOnce('›\n')
+				.mockReturnValueOnce('›\n')
+				.mockReturnValue('⏺ Processing\n');
+
+			const resultPromise = service.sendMessageToAgent(
+				'codex-session',
+				'dame status vs goal y ETA',
+				RUNTIME_TYPES.CODEX_CLI
+			);
+			await Promise.resolve();
+			expect(mockSessionHelper.sendMessage).not.toHaveBeenCalled();
+
+			releaseRegistration(true);
+			await jest.advanceTimersByTimeAsync(60000);
+			const result = await resultPromise;
+
+			expect(result.success).toBe(true);
+			expect(mockSessionHelper.sendMessage).toHaveBeenCalledWith(
+				'codex-session',
+				'dame status vs goal y ETA'
+			);
+		});
 	});
 
 	describe('escapeGeminiShellMode (private method)', () => {
