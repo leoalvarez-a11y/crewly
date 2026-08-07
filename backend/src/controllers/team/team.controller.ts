@@ -2882,66 +2882,25 @@ export async function updateTeam(this: ApiContext, req: Request, res: Response):
         }
       }
     }
-    // Support leaderIds update (multi-TL)
+    // Record requested leader pointers now; hierarchy relationships are
+    // normalized after any member replacement below.
     if (updates.leaderIds !== undefined && team.hierarchical) {
       team.leaderIds = updates.leaderIds;
       team.leaderId = updates.leaderIds[0]; // backward compat
-
-      // Set hierarchy fields on each leader
-      for (const lid of updates.leaderIds) {
-        const leader = team.members.find(m => m.id === lid);
-        if (leader) {
-          (leader as any).hierarchyLevel = 1;
-          (leader as any).canDelegate = true;
-        }
-      }
-
-      // Workers: any member not in leaderIds and not orchestrator
-      const leaderIdSet = new Set(updates.leaderIds);
-      const workers = team.members.filter(m => !leaderIdSet.has(m.id) && m.role !== 'orchestrator');
-      for (const worker of workers) {
-        (worker as any).hierarchyLevel = 2;
-        (worker as any).canDelegate = false;
-        // Assign to first leader if no parentMemberId already set to a valid leader
-        if (!worker.parentMemberId || !leaderIdSet.has(worker.parentMemberId)) {
-          (worker as any).parentMemberId = updates.leaderIds[0];
-        }
-      }
-
-      // Update subordinateIds on each leader
-      for (const lid of updates.leaderIds) {
-        const leader = team.members.find(m => m.id === lid);
-        if (leader) {
-          (leader as any).subordinateIds = workers
-            .filter(w => w.parentMemberId === lid)
-            .map(w => w.id);
-        }
-      }
     } else if (updates.leaderId !== undefined && team.hierarchical) {
       // Legacy single-leader update path
       team.leaderId = updates.leaderId;
       team.leaderIds = [updates.leaderId]; // keep in sync
-      // Wire parent-child relationships for the new leader
-      const leader = team.members.find(m => m.id === updates.leaderId);
-      if (leader) {
-        (leader as any).hierarchyLevel = 1;
-        (leader as any).canDelegate = true;
-        const workers = team.members.filter(m => m.id !== updates.leaderId && m.role !== 'orchestrator');
-        (leader as any).subordinateIds = workers.map(w => w.id);
-        for (const worker of workers) {
-          (worker as any).parentMemberId = leader.id;
-          (worker as any).hierarchyLevel = 2;
-          (worker as any).canDelegate = false;
-          (worker as any).subordinateIds = [];
-        }
-      }
     }
 
     // Update members if provided (from TeamModal edit)
     if (updates.members !== undefined && Array.isArray(updates.members)) {
       team.members = await Promise.all(updates.members.map(async (memberUpdate: TeamMemberUpdate) => {
-        // Find existing member by name (since the modal doesn't send IDs)
-        const existingMember = team.members.find(m => m.name === memberUpdate.name);
+        // Preserve stable member identity across renames. Older clients did not
+        // send IDs, so retain the name lookup as a backwards-compatible fallback.
+        const existingMember = memberUpdate.id
+          ? team.members.find(m => m.id === memberUpdate.id)
+          : team.members.find(m => m.name === memberUpdate.name);
 
         if (existingMember) {
           return {
@@ -2987,6 +2946,69 @@ export async function updateTeam(this: ApiContext, req: Request, res: Response):
           } as MutableTeamMember;
         }
       }));
+    }
+
+    // Normalize the hierarchy only after replacing members. Doing this before
+    // the replacement can leave leaderId pointing at a removed member when a
+    // leader is renamed by a client that generated a new member identity.
+    if (team.hierarchical) {
+      const memberIds = new Set(team.members.map(member => member.id));
+      const requestedLeaderIds = updates.leaderIds !== undefined
+        ? updates.leaderIds
+        : updates.leaderId !== undefined
+          ? [updates.leaderId]
+          : (team.leaderIds || (team.leaderId ? [team.leaderId] : []));
+
+      let validLeaderIds = requestedLeaderIds.filter((id, index, ids) =>
+        memberIds.has(id) && ids.indexOf(id) === index
+      );
+
+      // Recover legacy/corrupt configurations by using the explicit leader
+      // role. This also repairs teams whose leader pointer references a member
+      // that no longer exists.
+      if (validLeaderIds.length === 0) {
+        validLeaderIds = team.members
+          .filter(member => member.role === 'team-leader')
+          .map(member => member.id);
+      }
+
+      if (validLeaderIds.length === 0) {
+        res.status(400).json({
+          success: false,
+          error: 'Hierarchical teams require at least one valid team leader'
+        } as ApiResponse);
+        return;
+      }
+
+      team.leaderIds = validLeaderIds;
+      team.leaderId = validLeaderIds[0];
+      const leaderIdSet = new Set(validLeaderIds);
+      const workers = team.members.filter(member =>
+        !leaderIdSet.has(member.id) && member.role !== 'orchestrator'
+      );
+
+      for (const leaderId of validLeaderIds) {
+        const leader = team.members.find(member => member.id === leaderId)!;
+        (leader as any).hierarchyLevel = 1;
+        (leader as any).canDelegate = true;
+        (leader as any).parentMemberId = undefined;
+      }
+
+      for (const worker of workers) {
+        (worker as any).hierarchyLevel = 2;
+        (worker as any).canDelegate = false;
+        (worker as any).subordinateIds = [];
+        if (!worker.parentMemberId || !leaderIdSet.has(worker.parentMemberId)) {
+          (worker as any).parentMemberId = validLeaderIds[0];
+        }
+      }
+
+      for (const leaderId of validLeaderIds) {
+        const leader = team.members.find(member => member.id === leaderId)!;
+        (leader as any).subordinateIds = workers
+          .filter(worker => worker.parentMemberId === leaderId)
+          .map(worker => worker.id);
+      }
     }
 
     // #171: Handle archive toggle

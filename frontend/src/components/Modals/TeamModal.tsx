@@ -334,6 +334,7 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSubmit,
       const submitData = {
         ...formData,
         members: members.map(member => ({
+          id: member.id,
           name: member.name,
           role: member.role,
           systemPrompt: member.systemPrompt,

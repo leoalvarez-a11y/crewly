@@ -569,7 +569,10 @@ describe('TeamModal Component', () => {
           expect.objectContaining({
             name: 'Development Team',
             description: 'Frontend development team',
-            members: expect.any(Array)
+            members: expect.arrayContaining([
+              expect.objectContaining({ id: '1', name: 'John Doe' }),
+              expect.objectContaining({ id: '2', name: 'Jane Smith' })
+            ])
           })
         );
       });

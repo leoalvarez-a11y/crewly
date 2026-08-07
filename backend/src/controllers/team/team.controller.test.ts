@@ -1349,6 +1349,87 @@ describe('Teams Handlers', () => {
     });
   });
 
+  describe('updateTeam - member identity and hierarchy', () => {
+    it('should preserve a renamed leader ID and repair a stale leader pointer', async () => {
+      const team = {
+        id: 'team-1',
+        name: 'Catalog Team',
+        hierarchical: true,
+        leaderId: 'removed-leader',
+        leaderIds: ['removed-leader'],
+        members: [
+          {
+            id: 'leader-1',
+            name: 'Old Leader Name',
+            role: 'team-leader',
+            systemPrompt: 'Lead the team',
+            canDelegate: false,
+          },
+          {
+            id: 'worker-1',
+            name: 'Developer',
+            role: 'developer',
+            systemPrompt: 'Implement changes',
+          },
+        ],
+        projectIds: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      mockStorageService.getTeams.mockResolvedValue([team]);
+      mockRequest.params = { id: 'team-1' };
+      mockRequest.body = {
+        hierarchical: true,
+        leaderIds: ['removed-leader'],
+        members: [
+          {
+            id: 'leader-1',
+            name: 'Architect',
+            role: 'team-leader',
+            systemPrompt: 'Lead the team',
+            runtimeType: 'codex-cli',
+          },
+          {
+            id: 'worker-1',
+            name: 'Developer',
+            role: 'developer',
+            systemPrompt: 'Implement changes',
+            runtimeType: 'codex-cli',
+          },
+        ],
+      };
+
+      let savedTeam: any;
+      mockStorageService.saveTeam.mockImplementation((saved: any) => {
+        savedTeam = JSON.parse(JSON.stringify(saved));
+        return Promise.resolve();
+      });
+
+      await teamsHandlers.updateTeam.call(
+        mockApiContext,
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(savedTeam.leaderId).toBe('leader-1');
+      expect(savedTeam.leaderIds).toEqual(['leader-1']);
+      expect(savedTeam.members).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          id: 'leader-1',
+          name: 'Architect',
+          canDelegate: true,
+          hierarchyLevel: 1,
+        }),
+        expect.objectContaining({
+          id: 'worker-1',
+          parentMemberId: 'leader-1',
+          canDelegate: false,
+          hierarchyLevel: 2,
+        }),
+      ]));
+    });
+  });
+
   describe('updateTeam - parentTeamId', () => {
     it('should update parentTeamId on a team', async () => {
       const parentTeam = {

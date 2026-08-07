@@ -2749,6 +2749,21 @@ describe('AgentRegistrationService', () => {
 			expect(mockSessionHelper.sendKey).not.toHaveBeenCalled();
 		});
 
+		it('should ignore the Codex idle prompt placeholder', async () => {
+			const tuiRegistry = (service as any).tuiSessionRegistry;
+			tuiRegistry.set('codex-idle', RUNTIME_TYPES.CODEX_CLI);
+
+			mockSessionHelper.capturePane.mockReturnValue(
+				'Previous output\n' +
+				'â¯ Find and fix a bug in @filename\n'
+			);
+
+			await (service as any).scanForStuckMessages();
+
+			expect(mockSessionHelper.sendKey).not.toHaveBeenCalled();
+			expect(mockSessionHelper.sendEnter).not.toHaveBeenCalled();
+		});
+
 		it('should still scan non-Gemini sessions when Gemini sessions are present', async () => {
 			const tracker = (service as any).sentMessageTracker;
 			const tuiRegistry = (service as any).tuiSessionRegistry;

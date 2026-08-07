@@ -4719,6 +4719,7 @@ Loop until done, blocked, or explicitly reassigned:
 							const lowerContent = trimmedContent.toLowerCase();
 							const isPlaceholder =
 								lowerContent.startsWith('type your message') ||
+								lowerContent === 'find and fix a bug in @filename' ||
 								trimmedContent.startsWith('@');  // e.g., "@path/to/file"
 							if (isPlaceholder) {
 								break;

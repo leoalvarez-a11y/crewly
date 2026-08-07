@@ -234,6 +234,8 @@ export interface UpdateTeamMemberRuntimeRequestBody {
  * Member update data in team update request
  */
 export interface TeamMemberUpdate {
+  /** Stable member identity. Required when editing an existing member. */
+  id?: string;
   name: string;
   role: string;
   systemPrompt: string;
