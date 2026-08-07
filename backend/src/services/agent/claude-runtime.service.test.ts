@@ -70,7 +70,9 @@ describe('ClaudeRuntimeService', () => {
 			const patterns = service['getRuntimeReadyPatterns']();
 
 			expect(patterns).toContain('Welcome to Claude Code!');
+			expect(patterns).toContain('Welcome back');
 			expect(patterns).toContain('claude-code>');
+			expect(patterns).toContain('? for shortcuts');
 			expect(patterns).toContain('✻ Welcome to Claude');
 		});
 	});
@@ -80,6 +82,30 @@ describe('ClaudeRuntimeService', () => {
 			const output = 'Quick safety check: Is this a project you created or one you trust?';
 
 			expect((service as any).isClaudeTrustPrompt(output)).toBe(true);
+		});
+	});
+
+	describe('Claude startup prompt acceptance', () => {
+		it('selects the explicit acceptance option for bypass permissions mode', async () => {
+			const output = [
+				'WARNING: Claude Code running in Bypass Permissions mode',
+				'1. No, exit',
+				'2. Yes, I accept',
+			].join('\n');
+
+			await (service as any).acceptClaudeStartupPrompt('test-session', output);
+
+			expect(mockSessionHelper.sendKey).toHaveBeenCalledWith('test-session', 'Down');
+			expect(mockSessionHelper.sendEnter).toHaveBeenCalledWith('test-session');
+		});
+
+		it('accepts the workspace trust prompt without changing its default selection', async () => {
+			const output = 'Quick safety check: Is this a project you created or one you trust?';
+
+			await (service as any).acceptClaudeStartupPrompt('test-session', output);
+
+			expect(mockSessionHelper.sendKey).not.toHaveBeenCalled();
+			expect(mockSessionHelper.sendEnter).toHaveBeenCalledWith('test-session');
 		});
 	});
 
@@ -186,7 +212,7 @@ describe('ClaudeRuntimeService', () => {
 			expect(result.addedServers).toBe(1);
 			expect(result.serverNames).toContain('playwright');
 			expect(mockMkdir).toHaveBeenCalledWith(
-				'/test/project',
+				path.dirname(path.join('/test/project', '.mcp.json')),
 				{ recursive: true }
 			);
 			expect(mockAtomicWriteJson).toHaveBeenCalledWith(

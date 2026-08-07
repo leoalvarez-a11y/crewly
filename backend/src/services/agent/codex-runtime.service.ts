@@ -1,6 +1,7 @@
 import { RuntimeAgentService } from './runtime-agent.service.abstract.js';
 import { SessionCommandHelper } from '../session/index.js';
 import { RUNTIME_TYPES, type RuntimeType } from '../../constants.js';
+import { delay } from '../../utils/async.utils.js';
 
 /**
  * OpenAI Codex CLI specific runtime service implementation.
@@ -13,6 +14,75 @@ export class CodexRuntimeService extends RuntimeAgentService {
 
 	protected getRuntimeType(): RuntimeType {
 		return RUNTIME_TYPES.CODEX_CLI;
+	}
+
+	/** Detect the interactive self-update selector shown before the Codex UI. */
+	private isCodexUpdatePrompt(output: string): boolean {
+		return output.includes('Update available!')
+			&& output.includes('Skip until next version')
+			&& output.includes('Press enter to continue');
+	}
+
+	/** Detect Codex's first-use trust confirmation for a project directory. */
+	private isCodexTrustPrompt(output: string): boolean {
+		return output.includes('Do you trust the contents of this directory?')
+			&& output.includes('Yes, continue')
+			&& output.includes('Press enter to continue');
+	}
+
+	/**
+	 * Wait for Codex while safely dismissing its optional update prompt.
+	 * Selecting "Skip until next version" avoids modifying the installed CLI
+	 * during an agent launch and prevents every new PTY from blocking.
+	 */
+	async waitForRuntimeReady(
+		sessionName: string,
+		timeout: number,
+		checkInterval: number = 2000,
+	): Promise<boolean> {
+		const startTime = Date.now();
+		let updatePromptHandled = false;
+		let trustPromptHandled = false;
+
+		while (Date.now() - startTime < timeout) {
+			const output = this.sessionHelper.capturePane(sessionName);
+			if (!trustPromptHandled && this.isCodexTrustPrompt(output)) {
+				this.logger.info('Codex workspace trust prompt detected, accepting', { sessionName });
+				await this.sessionHelper.sendEnter(sessionName);
+				trustPromptHandled = true;
+				await delay(1000);
+				continue;
+			}
+
+			if (!updatePromptHandled && this.isCodexUpdatePrompt(output)) {
+				this.logger.info('Codex update prompt detected, deferring update', { sessionName });
+				await this.sessionHelper.sendKey(sessionName, 'Down');
+				await this.sessionHelper.sendKey(sessionName, 'Down');
+				await this.sessionHelper.sendEnter(sessionName);
+				updatePromptHandled = true;
+				await delay(1000);
+				continue;
+			}
+
+			if (this.getRuntimeReadyPatterns().some((pattern) => output.includes(pattern))) {
+				this.logger.info('Codex CLI ready', {
+					sessionName,
+					totalElapsed: Date.now() - startTime,
+					updatePromptHandled,
+					trustPromptHandled,
+				});
+				return true;
+			}
+
+			if (this.getRuntimeErrorPatterns().some((pattern) => output.includes(pattern))) {
+				return false;
+			}
+
+			await delay(checkInterval);
+		}
+
+		this.logger.warn('Timeout waiting for Codex CLI', { sessionName, timeout });
+		return false;
 	}
 
 	/**

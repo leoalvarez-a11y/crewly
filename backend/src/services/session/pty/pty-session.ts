@@ -609,6 +609,15 @@ export class PtySession implements ISession {
 			return false;
 		}
 
+		// node-pty's Windows ConPTY backend does not expose a stable shell PID
+		// (current prebuilds may report 0), and Windows has no pgrep equivalent.
+		// The PTY onExit handler remains authoritative for session death there.
+		// Returning false would make the runtime monitor repeatedly kill healthy
+		// Claude/Codex sessions after its startup grace period.
+		if (process.platform === 'win32') {
+			return true;
+		}
+
 		try {
 			const pid = this.ptyProcess.pid;
 			// pgrep -P <pid> lists child PIDs; exits 0 if found, 1 if none

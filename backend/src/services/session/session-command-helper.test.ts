@@ -2,7 +2,12 @@
  * Tests for SessionCommandHelper
  */
 
-import { SessionCommandHelper, KEY_CODES, createSessionCommandHelper } from './session-command-helper.js';
+import {
+	SessionCommandHelper,
+	KEY_CODES,
+	createSessionCommandHelper,
+	formatEnvironmentAssignment,
+} from './session-command-helper.js';
 import type { ISession, ISessionBackend } from './session-backend.interface.js';
 import { LoggerService } from '../core/logger.service.js';
 
@@ -266,9 +271,11 @@ describe('SessionCommandHelper', () => {
 	});
 
 	describe('setEnvironmentVariable', () => {
-		it('should write export command', async () => {
+		it('should write the assignment for the host shell', async () => {
 			await helper.setEnvironmentVariable('test-session', 'MY_VAR', 'my_value');
-			expect(mockSession.write).toHaveBeenCalledWith('export MY_VAR="my_value"\r');
+			expect(mockSession.write).toHaveBeenCalledWith(
+				`${formatEnvironmentAssignment(process.platform, 'MY_VAR', 'my_value')}\r`,
+			);
 		});
 
 		it('should throw error if session does not exist', async () => {
@@ -276,6 +283,23 @@ describe('SessionCommandHelper', () => {
 			await expect(
 				helper.setEnvironmentVariable('non-existent', 'KEY', 'VALUE')
 			).rejects.toThrow("Session 'non-existent' does not exist");
+		});
+	});
+
+	describe('formatEnvironmentAssignment', () => {
+		it('formats and escapes PowerShell assignments', () => {
+			expect(formatEnvironmentAssignment('win32', 'CREWLY_ROLE', "team lead's role"))
+				.toBe("$env:CREWLY_ROLE = 'team lead''s role'");
+		});
+
+		it('formats and escapes POSIX assignments', () => {
+			expect(formatEnvironmentAssignment('linux', 'CREWLY_ROLE', 'a$HOME`b"c'))
+				.toBe('export CREWLY_ROLE="a\\$HOME\\`b\\"c"');
+		});
+
+		it('rejects invalid environment variable names', () => {
+			expect(() => formatEnvironmentAssignment('win32', 'BAD-NAME', 'value'))
+				.toThrow('Invalid environment variable name');
 		});
 	});
 

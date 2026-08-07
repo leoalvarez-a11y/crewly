@@ -163,7 +163,7 @@ export function buildModuleConfigFromTeamMember(
 		memberId: member.id ?? '',
 		role: member.role,
 		teamId: team.id,
-		projectPath: runtime.projectPath,
+		projectPath: normalizePromptPath(runtime.projectPath),
 		runtimeType: runtime.runtimeType,
 
 		// Hierarchy
@@ -171,8 +171,8 @@ export function buildModuleConfigFromTeamMember(
 		subordinates,
 
 		// Skill paths
-		agentSkillsPath: runtime.agentSkillsPath,
-		tlSkillsPath: runtime.tlSkillsPath,
+		agentSkillsPath: normalizePromptPath(runtime.agentSkillsPath),
+		tlSkillsPath: normalizePromptPath(runtime.tlSkillsPath),
 		projectRoot: runtime.projectRoot,
 
 		// === Autonomy + capability overlay (member-level) ===
@@ -306,6 +306,18 @@ interface PromptParts {
  * Service dedicated to building and loading the various prompts used to communicate with agents.
  * Handles prompt templating, variable substitution, and fallback prompt generation.
  */
+/**
+ * Render filesystem paths in a form accepted by Git Bash and Windows APIs.
+ * Forward slashes preserve POSIX paths and avoid invalid JSON escapes when a
+ * Windows path is embedded in a shell example inside an agent prompt.
+ */
+export function normalizePromptPath(input: string): string;
+export function normalizePromptPath(input: undefined): undefined;
+export function normalizePromptPath(input: string | undefined): string | undefined;
+export function normalizePromptPath(input: string | undefined): string | undefined {
+	return input?.replace(/\\/g, '/');
+}
+
 export class PromptBuilderService {
 	private logger: ComponentLogger;
 	private readonly projectRoot: string;
@@ -331,9 +343,9 @@ export class PromptBuilderService {
 		this.logger = LoggerService.getInstance().createComponentLogger('PromptBuilderService');
 		this.projectRoot = projectRoot;
 		this.rolesDirectory = path.join(projectRoot, 'config', 'roles');
-		this.agentSkillsPath = path.join(projectRoot, 'config', 'skills', 'agent');
-		this.tlSkillsPath = path.join(projectRoot, 'config', 'skills', 'team-leader');
-		this.orchestratorSkillsPath = path.join(projectRoot, 'config', 'skills', 'orchestrator');
+		this.agentSkillsPath = normalizePromptPath(path.join(projectRoot, 'config', 'skills', 'agent'));
+		this.tlSkillsPath = normalizePromptPath(path.join(projectRoot, 'config', 'skills', 'team-leader'));
+		this.orchestratorSkillsPath = normalizePromptPath(path.join(projectRoot, 'config', 'skills', 'orchestrator'));
 	}
 
 	/**
@@ -673,8 +685,8 @@ Recursion clause: every delegator hop carries this rule — ORC→TL, TL→Worke
 		config: TeamMemberSessionConfig,
 		_options: PromptOptions = {}
 	): Promise<string> {
-		const agentSkillsPath = path.join(this.projectRoot, 'config', 'skills', 'agent');
-		const tlSkillsPath = path.join(this.projectRoot, 'config', 'skills', 'team-leader');
+		const agentSkillsPath = normalizePromptPath(path.join(this.projectRoot, 'config', 'skills', 'agent'));
+		const tlSkillsPath = normalizePromptPath(path.join(this.projectRoot, 'config', 'skills', 'team-leader'));
 
 		// WIRE-2 fallback (post-WIRE-1, post-WIRE-2): callers that provide a
 		// SessionConfig WITHOUT a TeamMember + Team pair land here. The new
@@ -697,7 +709,7 @@ Recursion clause: every delegator hop carries this rule — ORC→TL, TL→Worke
 			memberId: config.memberId ?? '',
 			role: config.role,
 			teamId: config.teamId,
-			projectPath: config.projectPath,
+			projectPath: normalizePromptPath(config.projectPath),
 			runtimeType: config.runtimeType as ModuleConfig['runtimeType'],
 			canDelegate: config.canDelegate,
 			orgRole,

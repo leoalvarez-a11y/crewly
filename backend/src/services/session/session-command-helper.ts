@@ -16,7 +16,7 @@
  * @module session-command-helper
  */
 
-import type { ISession, ISessionBackend } from './session-backend.interface.js';
+import { DEFAULT_SHELL, type ISession, type ISessionBackend } from './session-backend.interface.js';
 import { LoggerService, ComponentLogger } from '../core/logger.service.js';
 import { SESSION_COMMAND_DELAYS, EVENT_DELIVERY_CONSTANTS, TERMINAL_PATTERNS, PLAN_MODE_DISMISS_PATTERNS } from '../../constants.js';
 import { delay } from '../../utils/async.utils.js';
@@ -58,6 +58,34 @@ export const KEY_CODES: Record<string, string> = {
 	F11: '\x1b[23~',
 	F12: '\x1b[24~',
 };
+
+/**
+ * Format a shell-specific environment assignment for an interactive PTY.
+ *
+ * PowerShell uses its environment drive while POSIX shells use `export`.
+ * Values are escaped for the quoting rules of the selected shell so migrated
+ * Windows sessions receive the same Crewly identity variables as Linux and
+ * macOS sessions without treating their contents as shell syntax.
+ *
+ * @param platform - Platform of the PTY host process.
+ * @param key - Environment variable name.
+ * @param value - Environment variable value.
+ * @returns A command that assigns the value in the active shell.
+ * @throws If the key is not a valid portable environment variable name.
+ */
+export function formatEnvironmentAssignment(
+	platform: NodeJS.Platform,
+	key: string,
+	value: string,
+): string {
+	if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
+		throw new Error(`Invalid environment variable name: ${key}`);
+	}
+	if (platform === 'win32') {
+		return `$env:${key} = '${value.replace(/'/g, "''")}'`;
+	}
+	return `export ${key}="${value.replace(/(["\\$`])/g, '\\$1')}"`;
+}
 
 /**
  * Session Command Helper class
@@ -413,7 +441,8 @@ export class SessionCommandHelper {
 		this.logger.info('Creating session', { sessionName, cwd });
 
 		// Default to shell if no command specified
-		const command = options?.command || process.env.SHELL || '/bin/bash';
+		const command = options?.command
+			|| (process.platform === 'win32' ? DEFAULT_SHELL : process.env.SHELL || DEFAULT_SHELL);
 
 		const session = await this.backend.createSession(sessionName, {
 			cwd,
@@ -439,8 +468,8 @@ export class SessionCommandHelper {
 	): Promise<void> {
 		const session = this.getSessionOrThrow(sessionName);
 
-		// Export the variable
-		session.write(`export ${key}="${value}"\r`);
+		const assignment = formatEnvironmentAssignment(process.platform, key, value);
+		session.write(`${assignment}\r`);
 		this.logger.debug('Set environment variable', { sessionName, key });
 		await delay(SESSION_COMMAND_DELAYS.ENV_VAR_DELAY);
 	}

@@ -8,7 +8,7 @@
 
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import type { Request, Response } from 'express';
-import { getPreviousSessions, dismissPreviousSessions, writeToSession } from './session.controller.js';
+import { createSession, getPreviousSessions, dismissPreviousSessions, writeToSession } from './session.controller.js';
 import { RUNTIME_TYPES } from '../../constants.js';
 
 // Mock dependencies
@@ -46,10 +46,11 @@ jest.mock('../../services/core/logger.service.js', () => ({
 }));
 
 // Import mocked modules
-import { getSessionStatePersistence, getSessionBackendSync } from '../../services/session/index.js';
+import { getSessionStatePersistence, getSessionBackend, getSessionBackendSync } from '../../services/session/index.js';
 
 const mockGetPersistence = getSessionStatePersistence as jest.MockedFunction<typeof getSessionStatePersistence>;
 const mockGetBackend = getSessionBackendSync as jest.MockedFunction<typeof getSessionBackendSync>;
+const mockGetAsyncBackend = getSessionBackend as jest.MockedFunction<typeof getSessionBackend>;
 
 /**
  * Shape of the JSON response from getPreviousSessions
@@ -84,6 +85,30 @@ function createMockRes(): Response {
 function createMockReq(overrides?: Partial<Request>): Request {
 	return { params: {}, query: {}, body: {}, ...overrides } as Request;
 }
+
+describe('Session Controller - createSession', () => {
+	it('preserves an explicitly requested shell command', async () => {
+		const backend = {
+			sessionExists: jest.fn().mockReturnValue(false),
+			createSession: jest.fn<any>().mockResolvedValue({ name: 'custom-shell' }),
+		};
+		mockGetAsyncBackend.mockResolvedValue(backend as never);
+		const req = createMockReq({
+			body: {
+				name: 'custom-shell',
+				command: 'custom-shell.exe',
+			},
+		});
+		const res = createMockRes();
+
+		await createSession(req, res);
+
+		expect(backend.createSession).toHaveBeenCalledWith(
+			'custom-shell',
+			expect.objectContaining({ command: 'custom-shell.exe' }),
+		);
+	});
+});
 
 describe('Session Controller - Previous Sessions', () => {
 	let mockPersistence: any;

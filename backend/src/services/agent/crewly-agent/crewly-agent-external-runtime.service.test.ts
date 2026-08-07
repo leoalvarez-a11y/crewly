@@ -21,7 +21,10 @@ jest.mock('../../settings/settings.service.js', () => ({
   getSettingsService: jest.fn(() => ({ getSettings: mockGetSettings })),
 }));
 
-import { CrewlyAgentExternalRuntimeService } from './crewly-agent-external-runtime.service.js';
+import {
+  CrewlyAgentExternalRuntimeService,
+  resolveShellInvocation,
+} from './crewly-agent-external-runtime.service.js';
 import { CREWLY_AGENT_MANAGED_COMMAND } from '../../../constants.js';
 
 // Pull the private allow-list regex via a typed escape hatch so we
@@ -31,6 +34,30 @@ import { CREWLY_AGENT_MANAGED_COMMAND } from '../../../constants.js';
 const ALLOW_LIST_RE: RegExp = (CrewlyAgentExternalRuntimeService as unknown as {
   SAFE_SHELL_COMMAND_RE: RegExp;
 }).SAFE_SHELL_COMMAND_RE;
+
+describe('resolveShellInvocation', () => {
+  it('uses the Windows command processor for custom commands', () => {
+    expect(
+      resolveShellInvocation('win32', 'crewly-agent --verbose', {
+        ComSpec: 'C:\\Windows\\System32\\cmd.exe',
+      }),
+    ).toEqual({
+      executable: 'C:\\Windows\\System32\\cmd.exe',
+      args: ['/d', '/s', '/c', 'crewly-agent --verbose'],
+    });
+  });
+
+  it('uses the configured POSIX shell outside Windows', () => {
+    expect(
+      resolveShellInvocation('linux', 'crewly-agent --verbose', {
+        SHELL: '/usr/bin/zsh',
+      }),
+    ).toEqual({
+      executable: '/usr/bin/zsh',
+      args: ['-lc', 'crewly-agent --verbose'],
+    });
+  });
+});
 
 /**
  * Build a minimal CrewlySettings-shaped object exposing only the field

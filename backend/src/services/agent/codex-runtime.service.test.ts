@@ -66,6 +66,33 @@ describe('CodexRuntimeService', () => {
 		});
 	});
 
+	describe('Codex update prompt', () => {
+		it('detects and defers the optional update before reporting ready', async () => {
+			mockSessionHelper.capturePane
+				.mockReturnValueOnce('Update available!\n3. Skip until next version\nPress enter to continue')
+				.mockReturnValueOnce('OpenAI Codex\nmodel: gpt-5.6-terra');
+
+			const result = await service.waitForRuntimeReady('test-session', 5000, 0);
+
+			expect(result).toBe(true);
+			expect(mockSessionHelper.sendKey).toHaveBeenNthCalledWith(1, 'test-session', 'Down');
+			expect(mockSessionHelper.sendKey).toHaveBeenNthCalledWith(2, 'test-session', 'Down');
+			expect(mockSessionHelper.sendEnter).toHaveBeenCalledWith('test-session');
+		});
+
+		it('accepts the default safe option on the workspace trust prompt', async () => {
+			mockSessionHelper.capturePane
+				.mockReturnValueOnce('Do you trust the contents of this directory?\n1. Yes, continue\nPress enter to continue')
+				.mockReturnValueOnce('OpenAI Codex\nmodel: gpt-5.6-terra');
+
+			const result = await service.waitForRuntimeReady('test-session', 5000, 0);
+
+			expect(result).toBe(true);
+			expect(mockSessionHelper.sendEnter).toHaveBeenCalledWith('test-session');
+			expect(mockSessionHelper.sendKey).not.toHaveBeenCalled();
+		});
+	});
+
 	describe('getRuntimeErrorPatterns', () => {
 		it('should return Codex-specific error patterns', () => {
 			const patterns = service['getRuntimeErrorPatterns']();

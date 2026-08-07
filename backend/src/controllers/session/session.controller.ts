@@ -120,7 +120,7 @@ export async function createSession(
 
 		const session = await backend.createSession(name, {
 			cwd: cwd || process.cwd(),
-			command: command || process.platform === 'win32' ? 'powershell.exe' : '/bin/bash',
+			command: command || (process.platform === 'win32' ? 'powershell.exe' : '/bin/bash'),
 			args: args || [],
 			env: env || {},
 		});

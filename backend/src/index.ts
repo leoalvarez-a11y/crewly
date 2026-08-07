@@ -7,6 +7,7 @@ import path from 'path';
 
 // Load .env from project root
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+import { isCrewlyMainModule } from './utils/main-module.utils.js';
 
 import express from 'express';
 import { createServer } from 'http';
@@ -3669,9 +3670,7 @@ void (async () => {
 }
 
 // Start server if this file is run directly
-const isMainModule = process.argv[1] && (
-	process.argv[1].endsWith('/index.ts') || process.argv[1].endsWith('/index.js')
-);
+const isMainModule = isCrewlyMainModule(process.argv[1]);
 if (isMainModule) {
 	const server = new CrewlyServer();
 	const logger = LoggerService.getInstance().createComponentLogger('CrewlyServer');

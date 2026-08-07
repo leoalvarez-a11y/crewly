@@ -1374,9 +1374,9 @@ export const ProjectDetail: React.FC = () => {
               size="sm"
               icon={ExternalLink}
               onClick={handleOpenInFinder}
-              title="Open project folder in Finder"
+              title="Open project folder"
             >
-              Open in Finder
+              Open folder
             </Button>
           </div>
         </div>

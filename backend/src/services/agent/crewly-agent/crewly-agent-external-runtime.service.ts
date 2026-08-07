@@ -41,6 +41,29 @@ type ParentMessage =
   | { type: 'get-state' }
   | { type: 'shutdown' };
 
+/**
+ * Resolve a platform-native shell invocation for a validated custom command.
+ * Windows uses cmd.exe because its `/c` contract accepts a complete command
+ * string without requiring PowerShell-specific quoting.
+ */
+export function resolveShellInvocation(
+  platform: NodeJS.Platform,
+  command: string,
+  env: NodeJS.ProcessEnv = process.env,
+): { executable: string; args: string[] } {
+  if (platform === 'win32') {
+    return {
+      executable: env.ComSpec || 'cmd.exe',
+      args: ['/d', '/s', '/c', command],
+    };
+  }
+
+  return {
+    executable: env.SHELL || '/bin/bash',
+    args: ['-lc', command],
+  };
+}
+
 type WorkerMessage =
   | { type: 'ready' }
   | { type: 'result'; data: AgentRunResult }
@@ -261,8 +284,8 @@ export class CrewlyAgentExternalRuntimeService extends RuntimeAgentService {
       // settings.general.runtimeCommands['crewly-agent'] to a shell-ready
       // string. Validated against a strict allow-list (see
       // resolveRuntimeCommand) before reaching here.
-      const shell = process.env.SHELL || '/bin/bash';
-      this.child = spawn(shell, ['-lc', command], {
+      const shell = resolveShellInvocation(process.platform, command);
+      this.child = spawn(shell.executable, shell.args, {
         cwd: config.projectPath || this.projectRoot,
         env,
         stdio: ['pipe', 'pipe', 'pipe'],

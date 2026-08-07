@@ -1,4 +1,18 @@
-import { PromptBuilderService } from './prompt-builder.service.js';
+import { PromptBuilderService, normalizePromptPath } from './prompt-builder.service.js';
+import path from 'path';
+
+const rolePromptPath = (...segments: string[]): string =>
+	path.join('config', 'roles', ...segments);
+
+describe('normalizePromptPath', () => {
+	it('uses forward slashes for Windows paths embedded in bash commands', () => {
+		expect(normalizePromptPath('C:\\Users\\zytto\\crewly')).toBe('C:/Users/zytto/crewly');
+	});
+
+	it('preserves POSIX paths', () => {
+		expect(normalizePromptPath('/home/zytto/crewly')).toBe('/home/zytto/crewly');
+	});
+});
 import { LoggerService } from '../core/logger.service.js';
 import { TeamMemberSessionConfig } from '../../types/index.js';
 
@@ -69,6 +83,8 @@ describe('PromptBuilderService', () => {
 		process.env.CREWLY_USE_MODULAR_PROMPTS = 'false';
 		mockReadFile = jest.mocked(fsPromises.readFile);
 		mockAccess = jest.mocked(fsPromises.access);
+		mockReadFile.mockReset();
+		mockAccess.mockReset();
 		service = new PromptBuilderService('/test/project');
 	});
 
@@ -153,10 +169,10 @@ describe('PromptBuilderService', () => {
 
 			expect(result).toContain('Role-specific prompt for developer with session test-session');
 			expect(mockAccess).toHaveBeenCalledWith(
-				expect.stringContaining('/config/roles/developer/prompt.md')
+				expect.stringContaining(rolePromptPath('developer', 'prompt.md'))
 			);
 			expect(mockReadFile).toHaveBeenCalledWith(
-				expect.stringContaining('/config/roles/developer/prompt.md'),
+				expect.stringContaining(rolePromptPath('developer', 'prompt.md')),
 				'utf8'
 			);
 		});
@@ -191,7 +207,7 @@ describe('PromptBuilderService', () => {
 
 			expect(result).toBe('Register as dev with session test-session and member member-123');
 			expect(mockReadFile).toHaveBeenCalledWith(
-				expect.stringContaining('/config/roles/dev/prompt.md'),
+				expect.stringContaining(rolePromptPath('dev', 'prompt.md')),
 				'utf8'
 			);
 		});
@@ -239,7 +255,7 @@ describe('PromptBuilderService', () => {
 
 			expect(result).toBe(templateContent);
 			expect(mockReadFile).toHaveBeenCalledWith(
-				expect.stringContaining('/config/roles/test-template/prompt.md'),
+				expect.stringContaining(rolePromptPath('test-template', 'prompt.md')),
 				'utf8'
 			);
 		});
@@ -262,7 +278,7 @@ describe('PromptBuilderService', () => {
 
 			expect(result).toBe(true);
 			expect(mockAccess).toHaveBeenCalledWith(
-				expect.stringContaining('/config/roles/existing-template/prompt.md')
+				expect.stringContaining(rolePromptPath('existing-template', 'prompt.md'))
 			);
 		});
 
@@ -330,7 +346,7 @@ describe('PromptBuilderService', () => {
 		it('should return roles directory path', () => {
 			const result = service.getRolesDirectory();
 
-			expect(result).toContain('/config/roles');
+			expect(result).toContain(path.join('config', 'roles'));
 		});
 	});
 
@@ -339,7 +355,7 @@ describe('PromptBuilderService', () => {
 			const testService = new PromptBuilderService('/test/project');
 			const rolesDir = testService.getRolesDirectory();
 
-			expect(rolesDir).toBe('/test/project/config/roles');
+			expect(rolesDir).toBe(path.join('/test/project', 'config', 'roles'));
 		});
 
 		it('should use correct path structure when loading prompts', async () => {
@@ -353,7 +369,7 @@ describe('PromptBuilderService', () => {
 			await testService.loadPromptTemplate('developer-prompt.md');
 
 			expect(mockReadFile).toHaveBeenCalledWith(
-				'/custom/project/root/config/roles/developer/prompt.md',
+				path.join('/custom/project/root', 'config', 'roles', 'developer', 'prompt.md'),
 				'utf8'
 			);
 		});
@@ -366,7 +382,7 @@ describe('PromptBuilderService', () => {
 			await testService.promptTemplateExists('tpm-prompt.md');
 
 			expect(mockAccess).toHaveBeenCalledWith(
-				'/test/root/config/roles/tpm/prompt.md'
+				path.join('/test/root', 'config', 'roles', 'tpm', 'prompt.md')
 			);
 		});
 
@@ -380,7 +396,7 @@ describe('PromptBuilderService', () => {
 				await service.loadPromptTemplate(`${role}-prompt.md`);
 
 				expect(mockReadFile).toHaveBeenCalledWith(
-					expect.stringContaining(`/config/roles/${role}/prompt.md`),
+					expect.stringContaining(rolePromptPath(role, 'prompt.md')),
 					'utf8'
 				);
 			}
@@ -403,7 +419,7 @@ describe('PromptBuilderService', () => {
 
 			// Should attempt to load prompt from teams prompts directory
 			expect(mockAccess).toHaveBeenCalledWith(
-				expect.stringContaining('/config/roles/tpm/prompt.md')
+				expect.stringContaining(rolePromptPath('tpm', 'prompt.md'))
 			);
 		});
 	});
@@ -1053,7 +1069,7 @@ bash {{TL_SKILLS_PATH}}/delegate-task/execute.sh '{"teamId":"{{TEAM_ID}}","tlMem
 			expect(result).toContain('MANDATORY Behaviors');
 			// Verify tl-addon.md was read
 			expect(mockReadFile).toHaveBeenCalledWith(
-				expect.stringContaining('/config/roles/team-leader/tl-addon.md'),
+				expect.stringContaining(rolePromptPath('team-leader', 'tl-addon.md')),
 				'utf8'
 			);
 		});

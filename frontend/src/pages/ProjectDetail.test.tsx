@@ -333,7 +333,7 @@ describe('ProjectDetail Page', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Open in Finder')).toBeInTheDocument();
+        expect(screen.getByText('Open folder')).toBeInTheDocument();
       });
 
       (global.fetch as any).mockResolvedValueOnce({
@@ -341,7 +341,7 @@ describe('ProjectDetail Page', () => {
         json: () => Promise.resolve({ success: true })
       });
 
-      fireEvent.click(screen.getByText('Open in Finder'));
+      fireEvent.click(screen.getByText('Open folder'));
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(
@@ -385,14 +385,14 @@ describe('ProjectDetail Page', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Open in Finder')).toBeInTheDocument();
+        expect(screen.getByText('Open folder')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText('Open in Finder'));
+      fireEvent.click(screen.getByText('Open folder'));
 
       // Should handle the error gracefully (error would be shown via alert system)
       await waitFor(() => {
-        expect(screen.getByText('Open in Finder')).toBeInTheDocument();
+        expect(screen.getByText('Open folder')).toBeInTheDocument();
       });
     });
   });

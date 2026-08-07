@@ -75,6 +75,35 @@ export class ClaudeRuntimeService extends RuntimeAgentService {
 	}
 
 	/**
+	 * Detect Claude Code's one-time warning for --dangerously-skip-permissions.
+	 *
+	 * Unlike the workspace trust prompt, this selector defaults to "No, exit".
+	 * Pressing Enter alone therefore closes Claude and leaves Crewly waiting for
+	 * a runtime that can never become ready.
+	 */
+	private isClaudeBypassPermissionsPrompt(output: string): boolean {
+		return output.includes('Claude Code running in Bypass Permissions mode')
+			&& output.includes('Yes, I accept');
+	}
+
+	/** Accept a known Claude startup gate and report whether one was handled. */
+	private async acceptClaudeStartupPrompt(sessionName: string, output: string): Promise<boolean> {
+		if (this.isClaudeBypassPermissionsPrompt(output)) {
+			// The first option is "No, exit" and the second is "Yes, I accept".
+			await this.sessionHelper.sendKey(sessionName, 'Down');
+			await this.sessionHelper.sendEnter(sessionName);
+			return true;
+		}
+
+		if (this.isClaudeTrustPrompt(output)) {
+			await this.sessionHelper.sendEnter(sessionName);
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
 	 * Override waitForRuntimeReady to auto-accept workspace trust prompt (#144).
 	 *
 	 * Claude Code shows an interactive trust gate on first launch for
@@ -99,14 +128,17 @@ export class ClaudeRuntimeService extends RuntimeAgentService {
 			try {
 				const output = this.sessionHelper.capturePane(sessionName);
 
-				// #144: Auto-accept workspace trust prompt
-				if (this.isClaudeTrustPrompt(output)) {
+				// #144: Auto-accept workspace trust and bypass-permissions startup gates.
+				if (this.isClaudeBypassPermissionsPrompt(output) || this.isClaudeTrustPrompt(output)) {
 					trustPromptAttempts++;
-					this.logger.info('Claude Code trust prompt detected, auto-accepting', {
+					this.logger.info('Claude Code startup prompt detected, auto-accepting', {
 						sessionName,
 						attempt: trustPromptAttempts,
+						promptType: this.isClaudeBypassPermissionsPrompt(output)
+							? 'bypass_permissions'
+							: 'workspace_trust',
 					});
-					await this.sessionHelper.sendEnter(sessionName);
+					await this.acceptClaudeStartupPrompt(sessionName, output);
 					await delay(1000);
 					continue;
 				}
@@ -151,12 +183,14 @@ export class ClaudeRuntimeService extends RuntimeAgentService {
 	protected getRuntimeReadyPatterns(): string[] {
 		return [
 			'Welcome to Claude Code!',
+			'Welcome back',
 			'claude-code>',
 			'Ready to assist',
 			'How can I help',
 			'/help for help',
 			'cwd:',
 			'bypass permissions on',
+			'? for shortcuts',
 			'✻ Welcome to Claude',
 		];
 	}
@@ -196,72 +230,50 @@ export class ClaudeRuntimeService extends RuntimeAgentService {
 		version?: string;
 		message: string;
 	}> {
-		try {
-			return new Promise((resolve) => {
-				const whichProcess = spawn('which', ['claude']);
-				let stdout = '';
-				let stderr = '';
-
-				whichProcess.stdout.on('data', (data) => {
-					stdout += data.toString();
-				});
-
-				whichProcess.stderr.on('data', (data) => {
-					stderr += data.toString();
-				});
-
-				whichProcess.on('close', (code) => {
-					if (code === 0 && stdout.trim()) {
-						// Claude CLI found, try to get version
-						const versionProcess = spawn('claude', ['--version']);
-						let versionOutput = '';
-
-						versionProcess.stdout.on('data', (data) => {
-							versionOutput += data.toString();
-						});
-
-						versionProcess.on('close', (versionCode) => {
-							resolve({
-								installed: true,
-								version: versionCode === 0 ? versionOutput.trim() : 'unknown',
-								message: 'Claude Code CLI is available',
-							});
-						});
-
-						// Timeout for version check
-						setTimeout(() => {
-							versionProcess.kill();
-							resolve({
-								installed: true,
-								message: 'Claude Code CLI found but version check timed out',
-							});
-						}, 5000);
-					} else {
-						resolve({
-							installed: false,
-							message:
-								'Claude Code CLI not found. Please install Claude Code to enable agent functionality.',
-						});
-					}
-				});
-
-				// Timeout for which command
-				setTimeout(() => {
-					whichProcess.kill();
-					resolve({
-						installed: false,
-						message: 'Claude Code installation check timed out',
-					});
-				}, 5000);
-			});
-		} catch (error) {
-			return {
-				installed: false,
-				message: `Failed to check Claude installation: ${
-					error instanceof Error ? error.message : 'Unknown error'
-				}`,
+		return new Promise((resolve) => {
+			let settled = false;
+			let timeoutId: NodeJS.Timeout;
+			const finish = (result: { installed: boolean; version?: string; message: string }) => {
+				if (settled) return;
+				settled = true;
+				clearTimeout(timeoutId);
+				resolve(result);
 			};
-		}
+
+			// Calling Claude directly is portable and proves that the executable
+			// both resolves from PATH and can actually start.
+			const versionProcess = spawn('claude', ['--version'], { windowsHide: true });
+			let versionOutput = '';
+			versionProcess.stdout.on('data', (data) => {
+				versionOutput += data.toString();
+			});
+			versionProcess.on('error', () => {
+				finish({
+					installed: false,
+					message: 'Claude Code CLI not found. Please install Claude Code to enable agent functionality.',
+				});
+			});
+			versionProcess.on('close', (code) => {
+				finish(code === 0
+					? {
+						installed: true,
+						version: versionOutput.trim() || 'unknown',
+						message: 'Claude Code CLI is available',
+					}
+					: {
+						installed: false,
+						message: 'Claude Code CLI could not be started.',
+					});
+			});
+
+			timeoutId = setTimeout(() => {
+				versionProcess.kill();
+				finish({
+					installed: false,
+					message: 'Claude Code installation check timed out',
+				});
+			}, 5000);
+		});
 	}
 
 	/**

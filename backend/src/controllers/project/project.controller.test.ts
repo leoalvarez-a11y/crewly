@@ -6,6 +6,24 @@ import { StorageService, TmuxService, SchedulerService } from '../../services/in
 import { ActiveProjectsService } from '../../services/index.js';
 import { PromptTemplateService } from '../../services/index.js';
 
+describe('resolveFolderOpenCommand', () => {
+  it('uses Explorer with an argv path on Windows', () => {
+    expect(
+      projectsHandlers.resolveFolderOpenCommand('win32', 'C:\\Work Folder\\project'),
+    ).toEqual({
+      command: 'explorer.exe',
+      args: ['C:\\Work Folder\\project'],
+    });
+  });
+
+  it('uses the desktop opener on Linux', () => {
+    expect(projectsHandlers.resolveFolderOpenCommand('linux', '/home/user/project')).toEqual({
+      command: 'xdg-open',
+      args: ['/home/user/project'],
+    });
+  });
+});
+
 // Mock dependencies
 jest.mock('../../services/index.js');
 jest.mock('../../models/index.js');
@@ -60,7 +78,6 @@ describe('Projects Handlers', () => {
       promptTemplateService: new PromptTemplateService() as jest.Mocked<PromptTemplateService>,
       agentRegistrationService: {} as any,
       taskAssignmentMonitor: {} as any,
-      taskTrackingService: {} as any,
     };
 
     mockRequest = {};

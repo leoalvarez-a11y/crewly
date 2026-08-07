@@ -31,6 +31,36 @@ const logger = LoggerService.getInstance().createComponentLogger('ProjectControl
 
 const execAsync = promisify(exec);
 
+/** Resolve the platform-native command used to reveal a project directory. */
+export function resolveFolderOpenCommand(
+	platform: NodeJS.Platform,
+	folderPath: string,
+): { command: string; args: string[] } {
+	if (platform === 'win32') {
+		return { command: 'explorer.exe', args: [folderPath] };
+	}
+	if (platform === 'darwin') {
+		return { command: 'open', args: [folderPath] };
+	}
+	return { command: 'xdg-open', args: [folderPath] };
+}
+
+/** Open a directory without passing its path through a command shell. */
+async function openFolder(folderPath: string): Promise<void> {
+	const opener = resolveFolderOpenCommand(process.platform, folderPath);
+	await new Promise<void>((resolve, reject) => {
+		const child = spawn(opener.command, opener.args, {
+			detached: true,
+			stdio: 'ignore',
+		});
+		child.once('spawn', () => {
+			child.unref();
+			resolve();
+		});
+		child.once('error', reject);
+	});
+}
+
 /**
  * File tree node structure for project file listing
  */
@@ -999,17 +1029,17 @@ export async function openProjectInFinder(
 			return;
 		}
 		try {
-			await execAsync(`open "${resolvedProjectPath}"`);
-			res.json({ success: true, message: 'Project folder opened in Finder' } as ApiResponse);
+			await openFolder(resolvedProjectPath);
+			res.json({ success: true, message: 'Project folder opened' } as ApiResponse);
 		} catch (e) {
-			logger.error('Error opening Finder', { error: e instanceof Error ? e.message : String(e) });
-			res.status(500).json({ success: false, error: 'Failed to open Finder' } as ApiResponse);
+			logger.error('Error opening project folder', { error: e instanceof Error ? e.message : String(e) });
+			res.status(500).json({ success: false, error: 'Failed to open project folder' } as ApiResponse);
 		}
 	} catch (error) {
-		logger.error('Error opening project in Finder', { error: error instanceof Error ? error.message : String(error) });
+		logger.error('Error opening project folder', { error: error instanceof Error ? error.message : String(error) });
 		res.status(500).json({
 			success: false,
-			error: 'Failed to open project in Finder',
+			error: 'Failed to open project folder',
 		} as ApiResponse);
 	}
 }

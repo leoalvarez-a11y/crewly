@@ -125,7 +125,7 @@ describe('CommunicationModule', () => {
 			const result = await module.build(orchConfig);
 
 			expect(result).toContain(`${orchConfig.agentSkillsPath}/core/report-status`);
-			expect(result).toContain(`${orchConfig.agentSkillsPath}/core/send-message`);
+			expect(result).toContain(`${orchConfig.projectRoot}/config/skills/orchestrator/send-message`);
 		});
 	});
 

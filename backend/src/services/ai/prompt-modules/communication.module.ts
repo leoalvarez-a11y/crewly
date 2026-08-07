@@ -48,7 +48,7 @@ export class CommunicationModule implements PromptModule {
 		if (isOrchestrator) {
 			const fragment = loadRoleFragment(config.projectRoot, config.role, 'communication');
 			if (fragment) {
-				const orchestratorSkillsPath = path.join(config.projectRoot, 'config', 'skills', 'orchestrator');
+				const orchestratorSkillsPath = path.posix.join(config.projectRoot.replace(/\\/g, '/'), 'config', 'skills', 'orchestrator');
 				return fragment
 					.replace(/\{\{ORCHESTRATOR_SKILLS_PATH\}\}/g, orchestratorSkillsPath)
 					.replace(/\{\{AGENT_SKILLS_PATH\}\}/g, config.agentSkillsPath);
@@ -123,7 +123,7 @@ bash ${resolvedBase}/${skillPath}/execute.sh '${jsonExample}'
 		const sendCliFlags = '--to "<session>" --message "<msg>"';
 		// Derived from projectRoot to keep ModuleConfig surface small. If we ever
 		// need this in more modules, promote to `config.orchestratorSkillsPath`.
-		const orchestratorSkillsPath = path.join(config.projectRoot, 'config', 'skills', 'orchestrator');
+		const orchestratorSkillsPath = path.posix.join(config.projectRoot.replace(/\\/g, '/'), 'config', 'skills', 'orchestrator');
 		// Orc uses the orc-namespaced send-message wrapper, NOT core/send-message.
 		// See class-level JSDoc above for the rationale.
 		const sendExample = this.buildOrcSkillExample(orchestratorSkillsPath, 'send-message', sendMessageJson, sendCliFlags, config.runtimeType);
@@ -171,7 +171,7 @@ bash ${orchestratorSkillsPath}/${skillName}/execute.sh '${jsonExample}'
 	 * isolated from the long Slack/Chat/NOTIFY markdown body.
 	 */
 	private buildOrchestratorCommsBody(config: ModuleConfig, sendExample: string, reportExample: string): string {
-		const orchestratorSkillsPath = path.join(config.projectRoot, 'config', 'skills', 'orchestrator');
+		const orchestratorSkillsPath = path.posix.join(config.projectRoot.replace(/\\/g, '/'), 'config', 'skills', 'orchestrator');
 		void config; // reserved for future per-config formatting hooks
 
 		return `## Communication Protocol

@@ -9,6 +9,7 @@ import {
 	getSessionBackendSync,
 	createSessionBackend,
 	getSessionStatePersistence,
+	DEFAULT_SHELL,
 } from '../session/index.js';
 import { RuntimeAgentService } from './runtime-agent.service.abstract.js';
 import { RuntimeServiceFactory } from './runtime-service.factory.js';
@@ -2769,7 +2770,9 @@ Loop until done, blocked, or explicitly reassigned:
 						const persistence = getSessionStatePersistence();
 						persistence.registerSession(sessionName, {
 							cwd: projectPath || process.cwd(),
-							command: process.env.SHELL || '/bin/bash',
+							command: process.platform === 'win32'
+								? DEFAULT_SHELL
+								: process.env.SHELL || DEFAULT_SHELL,
 							args: [],
 						}, runtimeType, role, config.teamId, config.memberId);
 					} catch (persistError) {
@@ -2971,7 +2974,9 @@ Loop until done, blocked, or explicitly reassigned:
 				const persistence = getSessionStatePersistence();
 				persistence.registerSession(sessionName, {
 					cwd: cwdToUse,
-					command: process.env.SHELL || '/bin/bash',
+					command: process.platform === 'win32'
+						? DEFAULT_SHELL
+						: process.env.SHELL || DEFAULT_SHELL,
 					args: [],
 				}, runtimeType, role, config.teamId, config.memberId);
 			} catch (persistError) {
