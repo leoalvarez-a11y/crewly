@@ -29,6 +29,9 @@ if ($startContent -notmatch 'dist\\backend\\backend\\src\\index\.js') {
 if ($startContent -notmatch 'CREWLY_HOME') {
     throw 'Start-Crewly.ps1 no configura el perfil nativo de Crewly.'
 }
+if ($startContent -notmatch "CREWLY_LOCAL_AUTH\s*=\s*'1'") {
+    throw 'Start-Crewly.ps1 no habilita la autenticacion local restringida a loopback.'
+}
 if ($startContent -notmatch 'Start-Process \$DashboardUrl') {
     throw 'Start-Crewly.ps1 no abre el dashboard.'
 }

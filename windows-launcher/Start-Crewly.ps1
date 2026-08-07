@@ -81,6 +81,7 @@ try {
     }
     $env:Path = "$(Split-Path $nodePath -Parent);$gitBashDirectory;$userPath;$machinePath"
     $env:CREWLY_HOME = $CrewlyHome
+    $env:CREWLY_LOCAL_AUTH = '1'
     $env:WEB_PORT = '8787'
     $env:NODE_ENV = 'production'
 
