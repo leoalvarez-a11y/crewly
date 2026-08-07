@@ -383,16 +383,21 @@ export async function agentResponse(
 
     const resolvedSenderType = senderType || 'agent';
 
-    // Agent messages (status reports, [DONE], [WORKING], [IDLE], etc.) are internal
-    // system communications that should be routed to the orchestrator only — NOT
-    // saved to the user-facing chat conversation. Only orchestrator/system messages
-    // appear in the user's chat.
+    // Marker-based agent statuses ([DONE], [WORKING], [IDLE], etc.) are
+    // internal communications routed to the orchestrator only.
     const isAgentSender = resolvedSenderType === 'agent';
+    const internalStatusPattern =
+      /^\s*(?:---\s*)?\[(?:DONE|COMPLETED|DELIVERED|WORKING|IDLE|IN_PROGRESS|STATUS(?:\s+REPORT)?|BLOCKED|ERROR)\](?:\s|$)/i;
+    const isInternalAgentStatus = isAgentSender && internalStatusPattern.test(content);
+    // reply-chat still posts chat-v2 DMs through this compatibility endpoint.
+    // Persist normal replies with an explicit target, while keeping marker-based
+    // status traffic internal to the orchestrator.
+    const shouldPersist = !isAgentSender || (Boolean(conversationId) && !isInternalAgentStatus);
 
     let savedMessageId: string | undefined;
 
-    if (!isAgentSender) {
-      // Save orchestrator/system messages to the chat conversation
+    if (shouldPersist) {
+      // Save orchestrator/system messages and explicit user-facing agent replies.
       const savedMessage = await chatService.addDirectMessage(
         resolvedConversationId,
         content,
@@ -416,7 +421,9 @@ export async function agentResponse(
     // All are forwarded so the orchestrator can take follow-up action
     // (assign next task, notify user, etc.) without waiting for ActivityMonitor polling.
     if (isAgentSender) {
-      logger.info('Agent status routed to orchestrator (not saved to chat)', {
+      logger.info(shouldPersist
+        ? 'Agent reply stored in chat and routed to orchestrator'
+        : 'Agent status routed to orchestrator (not saved to chat)', {
         senderName,
         conversationId: resolvedConversationId,
         preview: content.substring(0, 80),

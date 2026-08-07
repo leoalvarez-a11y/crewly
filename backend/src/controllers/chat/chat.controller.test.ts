@@ -632,6 +632,67 @@ describe('Chat Controller', () => {
       expect(response.body.data.conversationId).toBeDefined();
     });
 
+    it('should persist a normal agent reply that explicitly targets a conversation', async () => {
+      const conversation = await request(app)
+        .post('/api/chat/conversations')
+        .send({ title: 'Architect chat' });
+      const conversationId = conversation.body.data.id;
+
+      const response = await request(app)
+        .post('/api/chat/agent-response')
+        .send({
+          content: 'Diagnóstico consolidado: la revisión terminó.',
+          senderName: 'Arquitecto líder',
+          senderType: 'agent',
+          conversationId,
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.data.messageId).toBeDefined();
+
+      const messages = await request(app)
+        .get('/api/chat/messages')
+        .query({ conversationId });
+      expect(messages.body.data).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            content: 'Diagnóstico consolidado: la revisión terminó.',
+            // The legacy DTO intentionally labels every chat-v2 agent as
+            // "orchestrator" while preserving the concrete sender name.
+            from: expect.objectContaining({ type: 'orchestrator', name: 'Arquitecto líder' }),
+          }),
+        ])
+      );
+    });
+
+    it('should keep an explicit marker status out of the user-facing conversation', async () => {
+      const conversation = await request(app)
+        .post('/api/chat/conversations')
+        .send({ title: 'Architect chat' });
+      const conversationId = conversation.body.data.id;
+
+      const response = await request(app)
+        .post('/api/chat/agent-response')
+        .send({
+          content: '[IDLE] Agent architect: Ready for next task',
+          senderName: 'Arquitecto líder',
+          senderType: 'agent',
+          conversationId,
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.data.messageId).toBeUndefined();
+
+      const messages = await request(app)
+        .get('/api/chat/messages')
+        .query({ conversationId });
+      expect(messages.body.data).not.toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ content: expect.stringContaining('[IDLE]') }),
+        ])
+      );
+    });
+
     it('should return 400 for missing content', async () => {
       const response = await request(app)
         .post('/api/chat/agent-response')
