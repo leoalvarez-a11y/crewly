@@ -20,8 +20,14 @@ foreach ($name in $launcherFiles) {
 }
 
 $startContent = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'Start-Crewly.ps1') -Raw
-if ($startContent -notmatch '/home/zytto/crewly/source/scripts/crewly-local-start\.sh') {
-    throw 'Start-Crewly.ps1 no apunta al checkout WSL oficial.'
+if ($startContent -match 'wsl\.exe|/home/zytto|/mnt/c') {
+    throw 'Start-Crewly.ps1 todavía depende de WSL.'
+}
+if ($startContent -notmatch 'dist\\backend\\backend\\src\\index\.js') {
+    throw 'Start-Crewly.ps1 no apunta al backend nativo compilado.'
+}
+if ($startContent -notmatch 'CREWLY_HOME') {
+    throw 'Start-Crewly.ps1 no configura el perfil nativo de Crewly.'
 }
 if ($startContent -notmatch 'Start-Process \$DashboardUrl') {
     throw 'Start-Crewly.ps1 no abre el dashboard.'

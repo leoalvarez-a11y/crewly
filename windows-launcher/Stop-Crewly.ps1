@@ -2,19 +2,33 @@
 param()
 
 $ErrorActionPreference = 'Stop'
-$Distro = 'Ubuntu'
-$LinuxUser = 'zytto'
-$LinuxCheckout = '/home/zytto/crewly/source'
-$LinuxStopScript = '/home/zytto/crewly/source/scripts/crewly-local-stop.sh'
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$PidFile = Join-Path $env:USERPROFILE '.crewly\run\crewly-windows.json'
+$BackendPath = Join-Path $RepoRoot 'dist\backend\backend\src\index.js'
 
 try {
-    $output = (& wsl.exe -d $Distro -u $LinuxUser --cd $LinuxCheckout -- $LinuxStopScript 2>&1 | Out-String).Trim()
-    if ($LASTEXITCODE -ne 0) {
-        throw $output
+    if (-not (Test-Path -LiteralPath $PidFile)) {
+        $message = 'Crewly para Windows ya está detenido.'
+    }
+    else {
+        $state = Get-Content -LiteralPath $PidFile -Raw | ConvertFrom-Json
+        $process = Get-CimInstance Win32_Process -Filter "ProcessId=$($state.pid)" -ErrorAction SilentlyContinue
+        if ($process -and $process.CommandLine -like "*$BackendPath*") {
+            Stop-Process -Id $state.pid
+            Wait-Process -Id $state.pid -Timeout 15 -ErrorAction SilentlyContinue
+            $message = 'Crewly para Windows se detuvo correctamente.'
+        }
+        elseif ($process) {
+            throw "El PID $($state.pid) pertenece a otro proceso; no se detuvo."
+        }
+        else {
+            $message = 'Crewly para Windows ya estaba detenido.'
+        }
+        Remove-Item -LiteralPath $PidFile -Force
     }
 
     $shell = New-Object -ComObject WScript.Shell
-    $shell.Popup($output, 4, 'Crewly', 64) | Out-Null
+    $shell.Popup($message, 4, 'Crewly', 64) | Out-Null
 }
 catch {
     $shell = New-Object -ComObject WScript.Shell

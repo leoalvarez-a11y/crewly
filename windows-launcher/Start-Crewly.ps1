@@ -2,16 +2,16 @@
 param()
 
 $ErrorActionPreference = 'Stop'
-$Distro = 'Ubuntu'
-$LinuxUser = 'zytto'
-$LinuxCheckout = '/home/zytto/crewly/source'
-$LinuxStartScript = '/home/zytto/crewly/source/scripts/crewly-local-start.sh'
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$CrewlyHome = Join-Path $env:USERPROFILE '.crewly'
+$RuntimeDirectory = Join-Path $CrewlyHome 'run'
+$LogDirectory = Join-Path $CrewlyHome 'logs'
+$PidFile = Join-Path $RuntimeDirectory 'crewly-windows.json'
+$StdoutLog = Join-Path $LogDirectory 'crewly-windows.log'
+$StderrLog = Join-Path $LogDirectory 'crewly-windows-error.log'
+$BackendPath = Join-Path $RepoRoot 'dist\backend\backend\src\index.js'
 $DashboardUrl = 'http://localhost:8787'
 $HealthUrl = "$DashboardUrl/health"
-$LauncherStateDirectory = Join-Path $env:LOCALAPPDATA 'Crewly'
-$LauncherLog = Join-Path $LauncherStateDirectory 'windows-launcher.log'
-
-New-Item -ItemType Directory -Path $LauncherStateDirectory -Force | Out-Null
 
 function Show-CrewlyError {
     param([Parameter(Mandatory)][string]$Message)
@@ -25,45 +25,106 @@ function Show-CrewlyError {
     ) | Out-Null
 }
 
-try {
-    $savedErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    $kernel = (& wsl.exe -d $Distro -u $LinuxUser -- uname -r 2>&1 | Out-String).Trim()
-    $kernelExitCode = $LASTEXITCODE
-    $ErrorActionPreference = $savedErrorActionPreference
-    if ($kernelExitCode -ne 0 -or $kernel -notmatch '(?i)(microsoft-standard-WSL2|WSL2)') {
-        throw "Ubuntu no existe como WSL2 o no se puede abrir como $LinuxUser. Resultado: $kernel"
+function Get-Node22Path {
+    $userPrograms = Join-Path $env:LOCALAPPDATA 'Programs'
+    $candidates = @(
+        Get-ChildItem -LiteralPath $userPrograms -Directory -Filter 'nodejs-22*' -ErrorAction SilentlyContinue |
+            Sort-Object Name -Descending |
+            ForEach-Object { Join-Path $_.FullName 'node.exe' }
+    )
+    $pathNode = Get-Command node.exe -ErrorAction SilentlyContinue
+    if ($pathNode) {
+        $candidates += $pathNode.Source
     }
 
-    $ErrorActionPreference = 'Continue'
-    $startOutput = (& wsl.exe -d $Distro -u $LinuxUser --cd $LinuxCheckout -- $LinuxStartScript 2>&1 | Out-String).Trim()
-    $startExitCode = $LASTEXITCODE
-    $ErrorActionPreference = $savedErrorActionPreference
-    "[$(Get-Date -Format o)]`r`n$startOutput" | Add-Content -LiteralPath $LauncherLog -Encoding UTF8
-    if ($startExitCode -ne 0) {
-        throw "Crewly devolvió el código $startExitCode.`n`n$startOutput`n`nRegistro: $LauncherLog"
+    foreach ($candidate in $candidates | Select-Object -Unique) {
+        if (-not (Test-Path -LiteralPath $candidate)) {
+            continue
+        }
+        $version = (& $candidate --version 2>$null).TrimStart('v')
+        if ([int]($version.Split('.')[0]) -ge 22) {
+            return (Resolve-Path -LiteralPath $candidate).Path
+        }
     }
+    throw 'Node.js 22 o posterior no está disponible para Windows.'
+}
 
+function Test-CrewlyHealth {
     try {
-        $response = Invoke-WebRequest -Uri $HealthUrl -UseBasicParsing -TimeoutSec 5
+        $response = Invoke-WebRequest -Uri $HealthUrl -UseBasicParsing -TimeoutSec 2
+        return $response.StatusCode -eq 200
     }
     catch {
-        throw "Crewly terminó el arranque, pero Windows no pudo acceder a $HealthUrl.`n`n$($_.Exception.Message)"
+        return $false
     }
-    if ($response.StatusCode -ne 200) {
-        throw "El health endpoint respondió HTTP $($response.StatusCode)."
+}
+
+try {
+    if (Test-CrewlyHealth) {
+        Start-Process $DashboardUrl
+        exit 0
+    }
+
+    if (-not (Test-Path -LiteralPath $BackendPath)) {
+        throw "No existe el backend compilado: $BackendPath"
+    }
+
+    New-Item -ItemType Directory -Path $RuntimeDirectory -Force | Out-Null
+    New-Item -ItemType Directory -Path $LogDirectory -Force | Out-Null
+
+    $nodePath = Get-Node22Path
+    $machinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+    $gitBashDirectory = 'C:\Program Files\Git\bin'
+    if (-not (Test-Path -LiteralPath (Join-Path $gitBashDirectory 'bash.exe'))) {
+        throw 'Git Bash no está instalado; Crewly lo necesita para sus skills nativos.'
+    }
+    $env:Path = "$(Split-Path $nodePath -Parent);$gitBashDirectory;$userPath;$machinePath"
+    $env:CREWLY_HOME = $CrewlyHome
+    $env:WEB_PORT = '8787'
+    $env:NODE_ENV = 'production'
+
+    $process = Start-Process -FilePath $nodePath `
+        -ArgumentList @('--expose-gc', '--max-old-space-size=4096', $BackendPath) `
+        -WorkingDirectory $RepoRoot `
+        -WindowStyle Hidden `
+        -RedirectStandardOutput $StdoutLog `
+        -RedirectStandardError $StderrLog `
+        -PassThru
+
+    [ordered]@{
+        pid = $process.Id
+        startedAt = (Get-Date).ToUniversalTime().ToString('o')
+        node = $nodePath
+        backend = $BackendPath
+    } | ConvertTo-Json | Set-Content -LiteralPath $PidFile -Encoding UTF8
+
+    $ready = $false
+    for ($attempt = 0; $attempt -lt 60; $attempt++) {
+        Start-Sleep -Seconds 1
+        if (Test-CrewlyHealth) {
+            $ready = $true
+            break
+        }
+        if ($process.HasExited) {
+            break
+        }
+    }
+
+    if (-not $ready) {
+        $details = if (Test-Path -LiteralPath $StderrLog) {
+            (Get-Content -LiteralPath $StderrLog -Tail 30 | Out-String).Trim()
+        } else {
+            'Crewly terminó antes de publicar el dashboard.'
+        }
+        throw "Crewly no respondió en $HealthUrl.`n`n$details"
     }
 
     Start-Process $DashboardUrl
-    [ordered]@{
-        openedAt = (Get-Date).ToUniversalTime().ToString('o')
-        url = $DashboardUrl
-        healthStatus = $response.StatusCode
-    } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $LauncherStateDirectory 'browser-open.json') -Encoding UTF8
 }
 catch {
     $message = $_.Exception.Message
-    "[$(Get-Date -Format o)] ERROR: $message" | Add-Content -LiteralPath $LauncherLog -Encoding UTF8
+    "[$(Get-Date -Format o)] ERROR: $message" | Add-Content -LiteralPath $StderrLog -Encoding UTF8
     Show-CrewlyError -Message $message
     exit 1
 }

@@ -2,12 +2,20 @@
 param()
 
 $ErrorActionPreference = 'Stop'
-$Distro = 'Ubuntu'
-$LinuxUser = 'zytto'
-$LinuxCheckout = '/home/zytto/crewly/source'
-$LinuxLogsScript = '/home/zytto/crewly/source/scripts/crewly-local-logs.sh'
+$LogDirectory = Join-Path $env:USERPROFILE '.crewly\logs'
+$StdoutLog = Join-Path $LogDirectory 'crewly-windows.log'
+$StderrLog = Join-Path $LogDirectory 'crewly-windows-error.log'
 
-& wsl.exe -d $Distro -u $LinuxUser --cd $LinuxCheckout -- $LinuxLogsScript --lines 100 --follow-seconds 120
-if ($LASTEXITCODE -ne 0) {
-    throw "No se pudieron mostrar los logs de Crewly (código $LASTEXITCODE)."
+Write-Host '=== Crewly para Windows: salida ===' -ForegroundColor Cyan
+if (Test-Path -LiteralPath $StdoutLog) {
+    Get-Content -LiteralPath $StdoutLog -Tail 100
+} else {
+    Write-Host 'Todavía no existe un registro de salida.'
+}
+
+Write-Host "`n=== Crewly para Windows: errores ===" -ForegroundColor Yellow
+if (Test-Path -LiteralPath $StderrLog) {
+    Get-Content -LiteralPath $StderrLog -Tail 100
+} else {
+    Write-Host 'No hay errores registrados.'
 }
