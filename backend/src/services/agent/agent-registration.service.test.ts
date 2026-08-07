@@ -394,6 +394,29 @@ describe('AgentRegistrationService', () => {
 			expect(fileReadCall).toBeDefined();
 			expect(fileReadCall).toContain('Read the file at');
 		});
+
+		it('embeds the chat request that activated an offline agent', async () => {
+			mockRuntimeService.waitForRuntimeReady.mockResolvedValue(true);
+			mockReadFile.mockResolvedValue('Register {{SESSION_ID}} as {{ROLE}}');
+			service.setActivationPriorityMessage('test-session', '[CHAT:chan-1] status real y ETA');
+
+			await service.initializeAgentWithRegistration(
+				'test-session',
+				'developer',
+				'/test/path',
+				90000,
+				undefined,
+				RUNTIME_TYPES.CODEX_CLI
+			);
+			await jest.advanceTimersByTimeAsync(1000);
+
+			const writtenPrompts = (fsPromises.writeFile as jest.Mock).mock.calls
+				.map((call: any[]) => String(call[1]));
+			expect(writtenPrompts.some((content: string) =>
+				content.includes('IMMEDIATE USER CHAT REQUEST') &&
+				content.includes('[CHAT:chan-1] status real y ETA')
+			)).toBe(true);
+		});
 	});
 
 	describe('createAgentSession', () => {

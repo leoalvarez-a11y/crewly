@@ -1568,16 +1568,29 @@ void (async () => {
 					// Activate-on-send: messaging an offline agent wakes it, then
 					// the dispatcher retries delivery. User-initiated, so it uses
 					// the wake-gate-free activation path.
-					activateAgent: async (agentSession: string) => {
+					activateAgent: async (agentSession: string, pendingPrompt: string) => {
+						const registrationService = this.apiController.agentRegistrationService;
+						registrationService.setActivationPriorityMessage(agentSession, pendingPrompt);
 						const { activateAgentBySession } = await import(
 							'./controllers/team/team.controller.js'
 						);
 						const res = await activateAgentBySession(this.apiController, agentSession);
-						if (!res.success) return false;
+						if (!res.success) {
+							registrationService.clearActivationPriorityMessage(agentSession);
+							return false;
+						}
+						const bootstrapStarted = registrationService.hasPendingRegistrationDelivery(agentSession);
+						if (!bootstrapStarted) {
+							registrationService.clearActivationPriorityMessage(agentSession);
+							return true;
+						}
 						// Activation starts registration asynchronously. Do not race the
 						// user's chat message against that bootstrap prompt in the same PTY.
-						return this.apiController.agentRegistrationService
-							.waitForRegistrationDelivery(agentSession);
+						const delivered = await registrationService.waitForRegistrationDelivery(agentSession);
+						return {
+							success: delivered,
+							consumedMessage: delivered && !registrationService.hasActivationPriorityMessage(agentSession),
+						};
 					},
 				});
 				this.chatV2Gateway = chatGateway;

@@ -153,6 +153,7 @@ export class AgentRegistrationService {
 	// waits on this barrier before delivering the user's message, otherwise the
 	// registration instruction and chat prompt race for the same TUI input box.
 	private registrationDeliveryPromises = new Map<string, Promise<boolean>>();
+	private activationPriorityMessages = new Map<string, string>();
 
 	// Background stuck-message detector timer
 	private stuckMessageDetectorTimer: ReturnType<typeof setInterval> | null = null;
@@ -1262,6 +1263,23 @@ export class AgentRegistrationService {
 		}
 	}
 
+	/** Attach the chat message that caused an offline agent to start. */
+	setActivationPriorityMessage(sessionName: string, message: string): void {
+		this.activationPriorityMessages.set(sessionName, message);
+	}
+
+	clearActivationPriorityMessage(sessionName: string): void {
+		this.activationPriorityMessages.delete(sessionName);
+	}
+
+	hasPendingRegistrationDelivery(sessionName: string): boolean {
+		return this.registrationDeliveryPromises.has(sessionName);
+	}
+
+	hasActivationPriorityMessage(sessionName: string): boolean {
+		return this.activationPriorityMessages.has(sessionName);
+	}
+
 	private async sendRegistrationPromptAsync(
 		sessionName: string,
 		role: string,
@@ -1276,7 +1294,15 @@ export class AgentRegistrationService {
 			this.logger.info('Loading registration prompt', { sessionName, role, runtimeType });
 
 			if (controller.signal.aborted) return false;
-			const prompt = await this.loadRegistrationPrompt(role, sessionName, memberId, runtimeType);
+			let prompt = await this.loadRegistrationPrompt(role, sessionName, memberId, runtimeType);
+			const activationMessage = this.activationPriorityMessages.get(sessionName);
+			if (activationMessage) {
+				this.activationPriorityMessages.delete(sessionName);
+				prompt += `\n\n## IMMEDIATE USER CHAT REQUEST\n` +
+					`This request caused your session to start. After completing registration, ` +
+					`answer it in chat BEFORE resuming, claiming, or executing any other work.\n\n` +
+					`<user_chat_request>\n${activationMessage}\n</user_chat_request>\n`;
+			}
 
 			this.logger.info('Registration prompt loaded, sending to agent', {
 				sessionName, role, runtimeType, promptLength: prompt.length,

@@ -153,7 +153,10 @@ export interface ChatV2DispatcherOptions {
    * active. User-initiated, so it bypasses the orchestrator wake-gate by
    * design. When omitted, inactive sends just queue (legacy behavior).
    */
-  activateAgent?: (agentSession: string) => Promise<boolean>;
+  activateAgent?: (
+    agentSession: string,
+    pendingPrompt: string,
+  ) => Promise<boolean | { success: boolean; consumedMessage?: boolean }>;
 }
 
 /** Inputs to the prompt formatter. */
@@ -231,7 +234,7 @@ export class ChatV2DispatcherService {
   private readonly formatPrompt: (args: FormatPromptArgs) => string;
   private readonly mentionResolver?: ChatV2MentionResolver;
   private readonly huddleMembersFor?: (channelId: string) => readonly string[];
-  private readonly activateAgent?: (agentSession: string) => Promise<boolean>;
+  private readonly activateAgent?: ChatV2DispatcherOptions['activateAgent'];
   private readonly logger: ComponentLogger;
 
   constructor(options: ChatV2DispatcherOptions) {
@@ -565,16 +568,26 @@ export class ChatV2DispatcherService {
           channelId: channel.id,
           agentSession: channel.agentSession,
         });
-        let activated = false;
-        try {
-          activated = await this.activateAgent(channel.agentSession);
+		let activated = false;
+		let consumedMessage = false;
+		try {
+			const activationResult = await this.activateAgent(channel.agentSession, prompt);
+			if (typeof activationResult === 'boolean') {
+				activated = activationResult;
+			} else {
+				activated = activationResult.success;
+				consumedMessage = activationResult.consumedMessage === true;
+			}
         } catch (err) {
           this.logger.warn('chat-v2 activate-on-send failed', {
             agentSession: channel.agentSession,
             err: err instanceof Error ? err.message : String(err),
           });
         }
-        if (activated) {
+		if (activated && consumedMessage) {
+			return { dispatched: true };
+		}
+		if (activated) {
           try {
             result = await this.agentSink.sendMessageToAgent(channel.agentSession, prompt);
           } catch (err) {

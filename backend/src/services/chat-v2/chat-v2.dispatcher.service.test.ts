@@ -183,7 +183,7 @@ describe('ChatV2DispatcherService', () => {
       expect(calls).toHaveLength(2); // initial + retry after activation
     });
 
-    it('stays failed when activation does not bring the agent up', async () => {
+	it('stays failed when activation does not bring the agent up', async () => {
       const { sink } = makeSink({ success: false, error: 'Session does not exist' });
       const dispatcher = new ChatV2DispatcherService({
         agentSink: sink,
@@ -191,8 +191,29 @@ describe('ChatV2DispatcherService', () => {
       });
 
       const result = await dispatcher.dispatchToAgent(makeChannel(), makeMessage());
-      expect(result).toEqual({ dispatched: false, error: 'Session does not exist' });
-    });
+		expect(result).toEqual({ dispatched: false, error: 'Session does not exist' });
+	});
+
+	it('does not resend when activation embedded the pending chat prompt', async () => {
+		const calls: string[] = [];
+		const sink: AgentMessageSink = {
+			async sendMessageToAgent(sessionName) {
+				calls.push(sessionName);
+				return { success: false, error: 'Session does not exist' };
+			},
+		};
+		const dispatcher = new ChatV2DispatcherService({
+			agentSink: sink,
+			activateAgent: async (_session, pendingPrompt) => ({
+				success: pendingPrompt.includes('[CHAT:chan-1]'),
+				consumedMessage: true,
+			}),
+		});
+
+		const result = await dispatcher.dispatchToAgent(makeChannel(), makeMessage());
+		expect(result).toEqual({ dispatched: true });
+		expect(calls).toHaveLength(1);
+	});
 
     it('treats thrown errors as a clean, reportable failure', async () => {
       const sink: AgentMessageSink = {
