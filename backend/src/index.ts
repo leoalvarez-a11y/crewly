@@ -1573,7 +1573,11 @@ void (async () => {
 							'./controllers/team/team.controller.js'
 						);
 						const res = await activateAgentBySession(this.apiController, agentSession);
-						return res.success;
+						if (!res.success) return false;
+						// Activation starts registration asynchronously. Do not race the
+						// user's chat message against that bootstrap prompt in the same PTY.
+						return this.apiController.agentRegistrationService
+							.waitForRegistrationDelivery(agentSession);
 					},
 				});
 				this.chatV2Gateway = chatGateway;

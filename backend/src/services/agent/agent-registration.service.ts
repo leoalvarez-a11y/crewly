@@ -149,6 +149,11 @@ export class AgentRegistrationService {
 	// AbortControllers for pending registration prompts (keyed by session name)
 	private registrationAbortControllers = new Map<string, AbortController>();
 
+	// Registration prompt deliveries that are still in flight. Chat activate-on-send
+	// waits on this barrier before delivering the user's message, otherwise the
+	// registration instruction and chat prompt race for the same TUI input box.
+	private registrationDeliveryPromises = new Map<string, Promise<boolean>>();
+
 	// Background stuck-message detector timer
 	private stuckMessageDetectorTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -1073,13 +1078,9 @@ export class AgentRegistrationService {
 			}, 10000);
 		}
 
-		// Send the registration prompt in background (don't block on it)
-		this.sendRegistrationPromptAsync(sessionName, role, memberId, runtimeType).catch((err) => {
-			this.logger.warn('Background registration prompt failed (non-blocking)', {
-				sessionName,
-				error: err instanceof Error ? err.message : String(err),
-			});
-		});
+		// Send the registration prompt in background. The promise is retained so
+		// user-initiated chat activation can wait for it before sending user input.
+		this.scheduleRegistrationPrompt(sessionName, role, memberId, runtimeType);
 
 		// Update agent status to 'started' since the runtime is running
 		// The agent will become 'active' only after it registers via the API endpoint
@@ -1228,12 +1229,45 @@ export class AgentRegistrationService {
 	 * Uses an AbortController so the operation can be cancelled if the
 	 * runtime exits before registration completes.
 	 */
+	private scheduleRegistrationPrompt(
+		sessionName: string,
+		role: string,
+		memberId?: string,
+		runtimeType: RuntimeType = RUNTIME_TYPES.CLAUDE_CODE
+	): void {
+		const delivery = this.sendRegistrationPromptAsync(sessionName, role, memberId, runtimeType);
+		this.registrationDeliveryPromises.set(sessionName, delivery);
+		void delivery.finally(() => {
+			if (this.registrationDeliveryPromises.get(sessionName) === delivery) {
+				this.registrationDeliveryPromises.delete(sessionName);
+			}
+		});
+	}
+
+	/** Wait for any bootstrap prompt currently using this session's TUI. */
+	async waitForRegistrationDelivery(sessionName: string, timeoutMs: number = 45000): Promise<boolean> {
+		const pending = this.registrationDeliveryPromises.get(sessionName);
+		if (!pending) return true;
+
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		try {
+			return await Promise.race([
+				pending,
+				new Promise<boolean>((resolve) => {
+					timer = setTimeout(() => resolve(false), timeoutMs);
+				}),
+			]);
+		} finally {
+			if (timer) clearTimeout(timer);
+		}
+	}
+
 	private async sendRegistrationPromptAsync(
 		sessionName: string,
 		role: string,
 		memberId?: string,
 		runtimeType: RuntimeType = RUNTIME_TYPES.CLAUDE_CODE
-	): Promise<void> {
+	): Promise<boolean> {
 		// Create AbortController for this registration
 		const controller = new AbortController();
 		this.registrationAbortControllers.set(sessionName, controller);
@@ -1241,14 +1275,14 @@ export class AgentRegistrationService {
 		try {
 			this.logger.info('Loading registration prompt', { sessionName, role, runtimeType });
 
-			if (controller.signal.aborted) return;
+			if (controller.signal.aborted) return false;
 			const prompt = await this.loadRegistrationPrompt(role, sessionName, memberId, runtimeType);
 
 			this.logger.info('Registration prompt loaded, sending to agent', {
 				sessionName, role, runtimeType, promptLength: prompt.length,
 			});
 
-			if (controller.signal.aborted) return;
+			if (controller.signal.aborted) return false;
 			const sent = await this.sendPromptRobustly(sessionName, prompt, runtimeType, controller.signal);
 
 			if (sent) {
@@ -1256,16 +1290,18 @@ export class AgentRegistrationService {
 			} else {
 				this.logger.warn('Registration prompt delivery returned false', { sessionName, role, runtimeType });
 			}
+			return sent;
 		} catch (error) {
 			if (controller.signal.aborted) {
 				this.logger.info('Registration prompt cancelled (runtime exited)', { sessionName });
-				return;
+				return false;
 			}
 			this.logger.warn('Failed to send registration prompt asynchronously', {
 				sessionName,
 				error: error instanceof Error ? error.message : String(error),
 				stack: error instanceof Error ? error.stack : undefined,
 			});
+			return false;
 		} finally {
 			this.registrationAbortControllers.delete(sessionName);
 		}
@@ -1488,13 +1524,8 @@ export class AgentRegistrationService {
 			}, 10000);
 		}
 
-		// Send the registration prompt in background (don't block on it)
-		this.sendRegistrationPromptAsync(sessionName, role, memberId, runtimeType).catch((err) => {
-			this.logger.warn('Background registration prompt failed after recreation (non-blocking)', {
-				sessionName,
-				error: err instanceof Error ? err.message : String(err),
-			});
-		});
+		// Retain the in-flight delivery so chat activation cannot race it.
+		this.scheduleRegistrationPrompt(sessionName, role, memberId, runtimeType);
 
 		// Update agent status to 'started' since the runtime is running
 		// The agent will become 'active' only after it registers via the API endpoint
@@ -4005,7 +4036,7 @@ Loop until done, blocked, or explicitly reassigned:
 				//            pressing Enter to recover before falling through to retry.
 				//   Phase 2: Output-change detection — compare before/after captures
 				//            to see if the agent started processing.
-				if (isClaudeCode) {
+				if (isClaudeCode || isCodexCli) {
 					// Progressive verification for Claude Code.
 					// Claude Code routinely takes 3-8s to start rendering with large
 					// context. The old 2.5s window caused false-positive Ctrl+C that
@@ -4093,7 +4124,7 @@ Loop until done, blocked, or explicitly reassigned:
 							// simple IP queries) cause false "delivery unconfirmed" verdicts
 							// and trigger duplicate sends (#retry-storm).
 							const outputChanged = currentOutput !== beforeOutput;
-							if (outputChanged) {
+							if (isClaudeCode && outputChanged) {
 								this.logger.info('Agent at prompt but output changed — fast response detected, delivery confirmed', {
 									sessionName,
 									attempt,
@@ -4242,7 +4273,7 @@ Loop until done, blocked, or explicitly reassigned:
 							// Fast-response detection: output changed since send AND our
 							// message text is NOT stuck at the prompt → a real response
 							// landed and returned to prompt before we looked. Delivered.
-							if (loopOutput !== beforeOutput) {
+							if (isClaudeCode && loopOutput !== beforeOutput) {
 								this.logger.info('Confirmation loop: output changed from pre-send — fast response confirmed', {
 									sessionName, attempt, confirmAttempt,
 								});
@@ -4386,6 +4417,10 @@ Loop until done, blocked, or explicitly reassigned:
 				});
 				if (isClaudeCode) {
 					await sessionHelper.clearCurrentCommandLine(sessionName);
+				} else if (isCodexCli) {
+					// Codex supports readline-style Ctrl+U. Do not use the Gemini
+					// Tab+Enter fallback here: it can submit Codex's idle suggestion.
+					await sessionHelper.sendKey(sessionName, 'C-u');
 				} else {
 					// Gemini CLI retry cleanup: NEVER send Ctrl+C — it triggers /quit
 					// and kills the CLI entirely, regardless of whether text is in the
@@ -4720,6 +4755,7 @@ Loop until done, blocked, or explicitly reassigned:
 							const isPlaceholder =
 								lowerContent.startsWith('type your message') ||
 								lowerContent === 'find and fix a bug in @filename' ||
+								lowerContent === 'improve documentation in @filename' ||
 								trimmedContent.startsWith('@');  // e.g., "@path/to/file"
 							if (isPlaceholder) {
 								break;
@@ -5140,6 +5176,7 @@ Loop until done, blocked, or explicitly reassigned:
 		abortSignal?: AbortSignal
 	): Promise<boolean> {
 		const isClaudeCode = runtimeType === RUNTIME_TYPES.CLAUDE_CODE;
+		const isCodexCli = runtimeType === RUNTIME_TYPES.CODEX_CLI;
 		const sessionHelper = await this.getSessionHelper();
 
 		// Step 1: Write prompt to a file (idempotent — may already exist from pre-launch write).
@@ -5234,7 +5271,7 @@ Loop until done, blocked, or explicitly reassigned:
 				// If Claude leaves the prompt at any point, the message was received.
 				// This avoids the old length-comparison approach which was unreliable
 				// (Claude's TUI redraws change output length unpredictably).
-				if (isClaudeCode) {
+				if (isClaudeCode || isCodexCli) {
 					for (let i = 0; i < 24; i++) {
 						await delay(1000);
 						if (abortSignal?.aborted) return false;
@@ -5250,7 +5287,7 @@ Loop until done, blocked, or explicitly reassigned:
 						}
 
 						// Claude left the prompt = started working on the message
-						if (!this.isClaudeAtPrompt(currentOutput, RUNTIME_TYPES.CLAUDE_CODE)) {
+						if (!this.isClaudeAtPrompt(currentOutput, runtimeType)) {
 							this.logger.debug('Kickoff delivered — Claude left prompt', {
 								sessionName, checkIndex: i,
 							});
@@ -5270,7 +5307,7 @@ Loop until done, blocked, or explicitly reassigned:
 						await delay(1000);
 						if (abortSignal?.aborted) return false;
 						const out2 = sessionHelper.capturePane(sessionName);
-						if (containsSpinnerOrWorkingIndicator(out2) || !this.isClaudeAtPrompt(out2, RUNTIME_TYPES.CLAUDE_CODE)) {
+						if (containsSpinnerOrWorkingIndicator(out2) || !this.isClaudeAtPrompt(out2, runtimeType)) {
 							this.logger.debug('Kickoff delivered on resend', { sessionName, checkIndex: j });
 							return true;
 						}

@@ -2379,6 +2379,34 @@ describe('AgentRegistrationService', () => {
 		}, 120000);
 	});
 
+	describe('Codex CLI delivery verification', () => {
+		beforeEach(() => {
+			jest.useFakeTimers();
+			mockSessionHelper.sessionExists.mockReturnValue(true);
+		});
+
+		afterEach(() => {
+			jest.useRealTimers();
+		});
+
+		it('does not accept an idle placeholder redraw as proof of delivery', async () => {
+			mockSessionHelper.capturePane.mockImplementation(() =>
+				'› Improve documentation in @filename\n'
+			);
+
+			const resultPromise = service.sendMessageToAgent(
+				'codex-session',
+				'dame status vs goal y ETA',
+				RUNTIME_TYPES.CODEX_CLI
+			);
+			await jest.advanceTimersByTimeAsync(300000);
+			const result = await resultPromise;
+
+			expect(result.success).toBe(false);
+			expect(mockSessionHelper.sendKey).toHaveBeenCalledWith('codex-session', 'C-u');
+		}, 120000);
+	});
+
 	describe('escapeGeminiShellMode (private method)', () => {
 		let escapeGeminiShellMode: (sessionName: string, helper: any) => Promise<boolean>;
 
@@ -2756,6 +2784,21 @@ describe('AgentRegistrationService', () => {
 			mockSessionHelper.capturePane.mockReturnValue(
 				'Previous output\n' +
 				'â¯ Find and fix a bug in @filename\n'
+			);
+
+			await (service as any).scanForStuckMessages();
+
+			expect(mockSessionHelper.sendKey).not.toHaveBeenCalled();
+			expect(mockSessionHelper.sendEnter).not.toHaveBeenCalled();
+		});
+
+		it('should ignore the Codex documentation idle prompt placeholder', async () => {
+			const tuiRegistry = (service as any).tuiSessionRegistry;
+			tuiRegistry.set('codex-idle-docs', RUNTIME_TYPES.CODEX_CLI);
+
+			mockSessionHelper.capturePane.mockReturnValue(
+				'Previous output\n' +
+				'› Improve documentation in @filename\n'
 			);
 
 			await (service as any).scanForStuckMessages();
