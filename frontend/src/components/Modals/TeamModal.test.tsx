@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { vi } from 'vitest';
 import { TeamModal } from './TeamModal';
+import { rolesService } from '../../services/roles.service';
 
 // Mock fetch globally
 global.fetch = vi.fn();
@@ -203,6 +204,35 @@ describe('TeamModal Component', () => {
   });
 
   describe('Basic Rendering', () => {
+    it('keeps a fourth member when editing a team whose role details finish loading', async () => {
+      vi.mocked(rolesService.getRole).mockResolvedValue({ assignedSkills: [] } as any);
+      const configuredTeam = {
+        ...mockTeam,
+        members: [
+          { ...mockTeam.members[0], id: '0003c6c9-a' },
+          { ...mockTeam.members[1], id: '450a7c64-b' },
+          { ...mockTeam.members[0], id: '4e070dd9-c', name: 'QA Agent' },
+        ],
+      };
+
+      const { rerender } = render(<TeamModal {...defaultProps} team={configuredTeam} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Add Team Member' }));
+
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Delete Member')).toHaveLength(4);
+      });
+
+      // Polling can refresh the same team as a new object while the modal is open.
+      // Unsaved member edits must not be replaced by the persisted three members.
+      rerender(<TeamModal {...defaultProps} team={{ ...configuredTeam }} />);
+      expect(screen.getAllByText('Delete Member')).toHaveLength(4);
+    });
+
     it('shows minimal per-agent provider, model policy, budget, and memory controls', async () => {
       const configuredTeam = {
         ...mockTeam,

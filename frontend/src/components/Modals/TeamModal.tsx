@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronDown, ChevronRight, Plus, Check, X } from 'lucide-react';
 import { FormLabel, FormInput, FormSelect, Button } from '../UI';
 import { useAlert } from '../UI/Dialog';
@@ -72,6 +72,8 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSubmit,
   const [expandedSkills, setExpandedSkills] = useState<Record<string, boolean>>({});
   // Cache role details including assignedSkills
   const [roleDetailsCache, setRoleDetailsCache] = useState<Record<string, RoleWithPrompt>>({});
+  const roleDetailsCacheRef = useRef<Record<string, RoleWithPrompt>>({});
+  const initializedTeamIdRef = useRef<string | null>(null);
 
   // Transform fetched roles into TeamRole format
   const availableRoles: TeamRole[] = (fetchedRoles || []).map(role => ({
@@ -88,18 +90,19 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSubmit,
    * Fetch role details including assignedSkills
    */
   const fetchRoleDetails = useCallback(async (roleKey: string): Promise<RoleWithPrompt | null> => {
-    if (roleDetailsCache[roleKey]) {
-      return roleDetailsCache[roleKey];
+    if (roleDetailsCacheRef.current[roleKey]) {
+      return roleDetailsCacheRef.current[roleKey];
     }
     try {
       const roleData = await rolesService.getRole(roleKey);
+      roleDetailsCacheRef.current = { ...roleDetailsCacheRef.current, [roleKey]: roleData };
       setRoleDetailsCache(prev => ({ ...prev, [roleKey]: roleData }));
       return roleData;
     } catch (err) {
       console.error('Failed to fetch role details:', err);
       return null;
     }
-  }, [roleDetailsCache]);
+  }, []);
 
   /**
    * Toggle skill section expansion for a member
@@ -170,7 +173,13 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSubmit,
   };
 
   useEffect(() => {
-    if (team) {
+    if (!isOpen) {
+      initializedTeamIdRef.current = null;
+      return;
+    }
+
+    if (team && initializedTeamIdRef.current !== team.id) {
+      initializedTeamIdRef.current = team.id;
       setFormData({
         name: team.name || '',
         projectPath: team.projectIds?.[0] || team.projectPath || '',
@@ -199,7 +208,7 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSubmit,
         });
       }
     }
-  }, [team, fetchRoleDetails]);
+  }, [isOpen, team, fetchRoleDetails]);
 
   // Initialize default members when roles are loaded and no existing team
   useEffect(() => {
@@ -281,7 +290,9 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSubmit,
   ];
 
   const addMember = () => {
-    const newId = (Math.max(...members.map(m => parseInt(m.id))) + 1).toString();
+    const newId = typeof globalThis.crypto?.randomUUID === 'function'
+      ? globalThis.crypto.randomUUID()
+      : `member-${Date.now()}-${members.length + 1}`;
     const fullstackDevRole = availableRoles.find(role => role.key === 'fullstack-dev');
     const newMember: TeamMember = {
       id: newId,
