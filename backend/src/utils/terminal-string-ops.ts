@@ -502,7 +502,8 @@ export function isAgentAtPrompt(output: string, runtimeType?: RuntimeType): bool
 
 /**
  * Check if text contains spinner characters or the working indicator (⏺).
- * This is the "spinner-only" check (no keyword matching).
+ * This is the definitive visual-state check: spinner glyphs, the working
+ * glyph, or the runtime's explicit "esc to interrupt" busy status bar.
  *
  * Replaces TERMINAL_PATTERNS.PROCESSING regex.
  *
@@ -515,7 +516,7 @@ export function containsSpinnerOrWorkingIndicator(text: string): boolean {
 		if (SPINNER_CHARS.has(cp) || cp === WORKING_INDICATOR_CODE) return true;
 		if (cp > 0xFFFF) i++; // skip surrogate pair
 	}
-	return false;
+	return containsBusyStatusBar(text);
 }
 
 /**

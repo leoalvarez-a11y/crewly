@@ -417,6 +417,10 @@ describe('containsSpinnerOrWorkingIndicator', () => {
 		expect(containsSpinnerOrWorkingIndicator('⏺ Processing')).toBe(true);
 	});
 
+	it('should detect Codex current busy status bar', () => {
+		expect(containsSpinnerOrWorkingIndicator('Working (10s · esc to interrupt)')).toBe(true);
+	});
+
 	it('should return false for no indicators', () => {
 		expect(containsSpinnerOrWorkingIndicator('regular text')).toBe(false);
 	});
