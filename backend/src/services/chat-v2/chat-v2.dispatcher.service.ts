@@ -197,8 +197,16 @@ export function defaultFormatPrompt(args: FormatPromptArgs): string {
   // to "optional" for non-@'d members.
   const mode = responseMode ?? 'required';
   const replyHint = mode === 'optional'
-    ? `回复本频道: 你在此 huddle 中收到此消息但未被 @ — 如有必要可用 \`reply-chat\` skill (conversationId="${channelId}") 回复，否则不回复也可以。`
-    : `回复本频道: 用 \`reply-chat\` skill, 参数 conversationId="${channelId}"、content="<your reply>"。`;
+    ? `Optional huddle message: reply only if useful, using the \`reply-chat\` skill with conversationId="${channelId}".`
+    : [
+      `CHAT VISIBILITY CONTRACT (MANDATORY):`,
+      `- The user cannot see your terminal output. Never leave acknowledgements, progress, or the final answer only in the terminal.`,
+      `- Before your first tool or command, call \`reply-chat\` for conversationId="${channelId}" with a concise acknowledgement, the understood goal, and your first action.`,
+      `- While working, call \`reply-chat\` after each material evidence-gathering step and at least once every 60 seconds. Summarize: action completed, evidence/result, next action, and blocker if any.`,
+      `- On completion or blockage, call \`reply-chat\` again with the full user-facing answer or the exact blocker.`,
+      `- Do not paste raw terminal streams, secrets, tokens, cookies, credentials, or repetitive spinner output. Report concise, useful plumbing like Codex progress updates.`,
+      `- Use this exact routing command shape: bash config/skills/agent/core/reply-chat/execute.sh --conversation "${channelId}" --sender "${channelName}" --text "<visible update>"`,
+    ].join('\n');
   return [
     `[CHAT:${channelId}]${idHint} <${senderId}@${channelName}>`,
     ``,

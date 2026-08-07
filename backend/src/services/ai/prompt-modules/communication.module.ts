@@ -263,6 +263,7 @@ ${sendExample}`;
 		const reportExample = this.buildSkillExample(config, 'core/report-status', reportStatusJson, reportCliFlags);
 		const sendExample = this.buildSkillExample(config, 'core/send-message', sendMessageJson, sendCliFlags);
 		const delegateExample = this.buildSkillExample(config, 'delegate-task', delegateTaskJson, delegateCliFlags, config.tlSkillsPath);
+		const replyChatPath = `${config.agentSkillsPath}/core/reply-chat/execute.sh`;
 
 		return `## Communication Protocol
 
@@ -277,6 +278,20 @@ ${sendExample}
 ### Delegating Tasks
 Use \`delegate-task\` to assign tasks to your subordinates:
 ${delegateExample}
+
+### Direct Chat Visibility (MANDATORY)
+When a message begins with \`[CHAT:<conversationId>]\`, the owner is waiting in
+the Crewly Chat UI. Plain terminal output is invisible to them.
+
+1. Before your first tool or command, post an acknowledgement with the goal and first action.
+2. After each material evidence-gathering step, and at least every 60 seconds, post a concise progress update with: action completed, evidence/result, next action, and blocker if any.
+3. Post the complete final answer or exact blocker before yielding.
+4. Never expose secrets or paste raw terminal/spinner output.
+
+Use the conversation ID from the incoming \`[CHAT:...]\` prefix:
+\`\`\`bash
+bash ${replyChatPath} --conversation "<conversationId>" --sender "${config.sessionName}" --text "<visible update>"
+\`\`\`
 
 ### Communication Rules
 1. **Report up** — Keep orchestrator informed of progress and blockers

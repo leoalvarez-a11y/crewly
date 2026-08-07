@@ -164,6 +164,16 @@ describe('CommunicationModule', () => {
 			expect(result).toContain(tlConfig.sessionName);
 		});
 
+		it('should require visible chat acknowledgement, progress, and final response', async () => {
+			const result = await module.build(tlConfig);
+
+			expect(result).toContain('### Direct Chat Visibility (MANDATORY)');
+			expect(result).toContain('Before your first tool or command');
+			expect(result).toContain('at least every 60 seconds');
+			expect(result).toContain('complete final answer or exact blocker');
+			expect(result).toContain('/core/reply-chat/execute.sh');
+		});
+
 		it('should not include orchestrator-only content', async () => {
 			const result = await module.build(tlConfig);
 

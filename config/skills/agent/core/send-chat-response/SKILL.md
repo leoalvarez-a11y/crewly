@@ -5,6 +5,7 @@ version: 1.0.0
 category: communication
 skillType: claude-skill
 assignableRoles:
+  - team-leader
   - developer
   - qa
   - tpm

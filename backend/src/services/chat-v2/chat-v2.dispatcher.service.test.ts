@@ -74,6 +74,12 @@ describe('ChatV2DispatcherService', () => {
       expect(prompt).toContain('\nhi, sam\n');
       expect(prompt).toContain('`reply-chat`');
       expect(prompt).toContain('conversationId="chan-1"');
+      expect(prompt).toContain('CHAT VISIBILITY CONTRACT (MANDATORY)');
+      expect(prompt).toContain('Before your first tool or command');
+      expect(prompt).toContain('at least once every 60 seconds');
+      expect(prompt).toContain('full user-facing answer or the exact blocker');
+      expect(prompt).toContain('--conversation "chan-1"');
+      expect(prompt).toContain('--sender "Chat with Sam"');
     });
 
     it('appends [cmid:...] when clientMessageId is present', () => {
@@ -632,7 +638,8 @@ describe('ChatV2DispatcherService', () => {
         expect(calledForB.message).not.toMatch(/否则不回复也可以/);
 
         const calledForA = calls.find((c) => c.sessionName === 'sess-a')!;
-        expect(calledForA.message).toMatch(/否则不回复也可以/);
+        expect(calledForA.message).toContain('Optional huddle message');
+        expect(calledForA.message).toContain('reply only if useful');
       });
 
       it('captures per-member sink failures without short-circuiting the rest', async () => {
