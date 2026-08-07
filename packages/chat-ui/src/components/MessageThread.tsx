@@ -30,7 +30,7 @@
  * @module components/MessageThread
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bot, MessageSquare, SmilePlus, Link as LinkIcon, MoreHorizontal } from 'lucide-react';
 import type { Message } from '../types/chat.types';
 import { useMessages } from '../hooks/useMessages';
@@ -40,6 +40,12 @@ export interface MessageThreadProps {
   channelId: string | null;
   /** Display name for the agent — used by the thinking indicator. */
   agentName?: string;
+  /** Live execution status supplied by the host for truthful plumbing. */
+  agentWorkingStatus?: 'idle' | 'in_progress';
+  /** Runtime lifecycle status supplied by the host. */
+  agentStatus?: 'active' | 'inactive' | 'suspended' | 'starting' | 'started' | 'activating' | 'error';
+  /** Most recent runtime heartbeat/activity timestamp. */
+  agentLastActivityAt?: string | null;
   /** Height of the scroll area — caller decides layout. */
   className?: string;
   /** Optional empty state override. */
@@ -108,6 +114,9 @@ export interface MessageThreadProps {
 export function MessageThread({
   channelId,
   agentName,
+  agentWorkingStatus,
+  agentStatus,
+  agentLastActivityAt,
   className = '',
   emptyState,
   unreadAfterSeq = null,
@@ -145,6 +154,14 @@ export function MessageThread({
   // new message at the bottom changes it → scroll. Channel switch + the
   // thinking indicator still scroll to the latest.
   const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
+  const latestMessageAt = messages.length > 0 ? messages[messages.length - 1].createdAt : undefined;
+  const [thinkingClock, setThinkingClock] = useState(() => Date.now());
+  useEffect(() => {
+    if (!agentThinking) return;
+    setThinkingClock(Date.now());
+    const interval = window.setInterval(() => setThinkingClock(Date.now()), 1_000);
+    return () => window.clearInterval(interval);
+  }, [agentThinking, lastMessageId]);
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [lastMessageId, channelId, agentThinking]);
@@ -191,7 +208,17 @@ export function MessageThread({
         className={`flex flex-1 flex-col ${flat ? 'gap-0 px-4 py-4' : 'gap-3 px-4 py-4'}`}
       >
         {renderTimeline({ messages, unreadAfterSeq, unreadDividerLabel, layout, onReplyInThread })}
-        {agentThinking && <AgentThinkingRow agentName={agentName} layout={layout} />}
+        {agentThinking && (
+          <AgentThinkingRow
+            agentName={agentName}
+            layout={layout}
+            workingStatus={agentWorkingStatus}
+            agentStatus={agentStatus}
+            lastActivityAt={agentLastActivityAt}
+            waitingSince={latestMessageAt}
+            now={thinkingClock}
+          />
+        )}
         {loading && (
           <li
             className={`text-xs ${flat ? 'text-text-secondary-dark' : 'text-text-secondary-dark'}`}
@@ -703,11 +730,38 @@ function DeliveryFooter({ message }: { message: Message }): JSX.Element {
 function AgentThinkingRow({
   agentName,
   layout = 'bubble',
+  workingStatus,
+  agentStatus,
+  lastActivityAt,
+  waitingSince,
+  now,
 }: {
   agentName?: string;
   layout?: 'bubble' | 'flat';
+  workingStatus?: 'idle' | 'in_progress';
+  agentStatus?: 'active' | 'inactive' | 'suspended' | 'starting' | 'started' | 'activating' | 'error';
+  lastActivityAt?: string | null;
+  waitingSince?: string;
+  now: number;
 }): JSX.Element {
-  const label = agentName ? `${agentName} is thinking` : 'Agent is thinking';
+  const name = agentName ?? 'El agente';
+  const parsedWaitingSince = waitingSince ? Date.parse(waitingSince) : Number.NaN;
+  const waitingSeconds = Number.isFinite(parsedWaitingSince)
+    ? Math.max(0, Math.floor((now - parsedWaitingSince) / 1_000))
+    : 0;
+  const elapsed = waitingSeconds < 60
+    ? `${waitingSeconds} s`
+    : `${Math.floor(waitingSeconds / 60)} min ${waitingSeconds % 60} s`;
+  const stopped = agentStatus === 'inactive' || agentStatus === 'suspended' || agentStatus === 'error'
+    || (workingStatus === 'idle' && waitingSeconds >= 30);
+  const activitySuffix = lastActivityAt
+    ? ` · última señal ${formatActivityAge(lastActivityAt, now)}`
+    : '';
+  const label = stopped
+    ? `${name} está inactivo y no publicó cierre · espera ${elapsed}${activitySuffix}`
+    : workingStatus === 'in_progress'
+      ? `${name} sigue ejecutando · espera ${elapsed}${activitySuffix}`
+      : `Instrucción entregada a ${name} · esperando avance visible ${elapsed}${activitySuffix}`;
   const flat = layout === 'flat';
   if (flat) {
     // Align to the same avatar gutter as message rows so the column reads clean.
@@ -722,7 +776,7 @@ function AgentThinkingRow({
           <Bot size={16} />
         </span>
         <span className="inline-flex items-center gap-2 text-[13px] text-text-secondary-dark">
-          <span aria-hidden="true" className="flex gap-0.5">
+          <span aria-hidden="true" className={`flex gap-0.5 ${stopped ? 'opacity-50' : ''}`}>
             <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-text-secondary-dark [animation-delay:-0.3s]" />
             <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-text-secondary-dark [animation-delay:-0.15s]" />
             <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-text-secondary-dark" />
@@ -741,7 +795,7 @@ function AgentThinkingRow({
     >
       <div className="rounded-2xl bg-surface-dark px-3 py-2 text-sm text-text-secondary-dark shadow-sm">
         <span className="inline-flex items-center gap-1">
-          <span aria-hidden="true" className="flex gap-0.5">
+          <span aria-hidden="true" className={`flex gap-0.5 ${stopped ? 'opacity-50' : ''}`}>
             <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-text-secondary-dark [animation-delay:-0.3s]" />
             <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-text-secondary-dark [animation-delay:-0.15s]" />
             <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-text-secondary-dark" />
@@ -751,6 +805,14 @@ function AgentThinkingRow({
       </div>
     </li>
   );
+}
+
+/** Compact age for the live execution plumbing row. */
+function formatActivityAge(iso: string, now: number): string {
+  const at = Date.parse(iso);
+  if (!Number.isFinite(at)) return 'sin hora disponible';
+  const seconds = Math.max(0, Math.floor((now - at) / 1_000));
+  return seconds < 60 ? `hace ${seconds} s` : `hace ${Math.floor(seconds / 60)} min`;
 }
 
 /**

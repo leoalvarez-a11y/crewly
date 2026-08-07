@@ -36,6 +36,7 @@ import {
   type ChatTeam,
 } from './LiveTeamChatPage';
 import { useTeams } from '../../hooks/useTeams';
+import { useAgentHeartbeat } from '../../hooks/useAgentHeartbeat';
 import { useSidebar } from '../../contexts/SidebarContext';
 import { resolveBackendURL, resolveChatMode } from '../../utils/chat-backend';
 import {
@@ -72,6 +73,7 @@ async function ensureChannel(url: string, body: Record<string, unknown>): Promis
 export function TeamChatRoute(): JSX.Element {
   const [searchParams] = useSearchParams();
   const { teams } = useTeams();
+  const { agents: agentHeartbeats } = useAgentHeartbeat();
   const { isCollapsed, collapseSidebar, expandSidebar } = useSidebar();
 
   // The chat is already a dense 3-panel surface; collapse the app's left nav
@@ -104,22 +106,29 @@ export function TeamChatRoute(): JSX.Element {
   const directoryAgents = useMemo<DirectoryAgentEntry[]>(() => {
     const seen = new Set<string>();
     const out: DirectoryAgentEntry[] = [];
+    const heartbeatBySession = new Map(
+      agentHeartbeats.map((agent) => [agent.sessionName, agent] as const),
+    );
     for (const team of scopedTeams) {
       for (const member of team.members ?? []) {
         const session = member.sessionName;
         if (!session || seen.has(session)) continue;
         seen.add(session);
+        const heartbeat = heartbeatBySession.get(session);
         out.push({
           agentSession: session,
           name: member.name,
           presence: agentStatusToPresence(member.agentStatus),
           teamName: team.name,
           role: member.role,
+          workingStatus: heartbeat?.workingStatus ?? member.workingStatus,
+          agentStatus: heartbeat?.agentStatus ?? member.agentStatus,
+          lastActivityCheck: heartbeat?.lastActivityCheck ?? member.lastActivityCheck ?? null,
         });
       }
     }
     return out;
-  }, [scopedTeams]);
+  }, [scopedTeams, agentHeartbeats]);
 
   // Teams for the workspace rail: identity + lead/member sessions. The lead is
   // a member listed in `leaderIds` (or the deprecated `leaderId`), or a member

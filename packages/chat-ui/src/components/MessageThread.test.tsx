@@ -318,6 +318,64 @@ describe('MessageThread threading', () => {
     fireEvent.click(await screen.findByText('Load older'));
     expect(onLoadMore).toHaveBeenCalledTimes(1);
   });
+
+  it('shows live execution plumbing instead of a generic thinking spinner', () => {
+    const waiting: Message = {
+      id: 'user-1',
+      channelId: 'dm-1',
+      seq: 1,
+      author: { role: 'user', id: 'me', name: 'Me' },
+      content: 'Haz la auditoría',
+      createdAt: new Date().toISOString(),
+      clientMessageId: 'cmid-1',
+      mentions: [],
+    };
+    render(
+      <ChatAPIProvider mode="mock">
+        <MessageThread
+          channelId="dm-1"
+          layout="flat"
+          messages={[waiting]}
+          agentThinking
+          agentName="Arquitecto"
+          agentWorkingStatus="in_progress"
+          agentStatus="active"
+        />
+      </ChatAPIProvider>,
+    );
+    expect(screen.getByTestId('agent-thinking')).toHaveTextContent(
+      /Arquitecto sigue ejecutando.*espera 0 s/i,
+    );
+  });
+
+  it('warns when the runtime is idle and did not publish a closing response', () => {
+    const waiting: Message = {
+      id: 'user-2',
+      channelId: 'dm-1',
+      seq: 2,
+      author: { role: 'user', id: 'me', name: 'Me' },
+      content: 'Continúa',
+      createdAt: new Date(Date.now() - 31_000).toISOString(),
+      clientMessageId: 'cmid-2',
+      mentions: [],
+    };
+    render(
+      <ChatAPIProvider mode="mock">
+        <MessageThread
+          channelId="dm-1"
+          layout="flat"
+          messages={[waiting]}
+          agentThinking
+          agentName="Arquitecto"
+          agentWorkingStatus="idle"
+          agentStatus="active"
+        />
+      </ChatAPIProvider>,
+    );
+    expect(screen.getByTestId('agent-thinking')).toHaveTextContent(
+      /Arquitecto está inactivo y no publicó cierre/i,
+    );
+  });
 });
 
 describe('relativeTime', () => {

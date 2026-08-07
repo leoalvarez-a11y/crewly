@@ -33,6 +33,10 @@ vi.mock('../../hooks/useTeams', () => ({
   useTeams: () => ({ teams: teamsRef.teams, loading: false, error: null, refresh: vi.fn() }),
 }));
 
+vi.mock('../../hooks/useAgentHeartbeat', () => ({
+  useAgentHeartbeat: () => ({ agents: [], isLoading: false, error: null, refresh: vi.fn() }),
+}));
+
 import { TeamChatRoute } from './TeamChatRoute';
 
 function makeTeam(id: string, name: string, members: Team['members'] = []): Team {

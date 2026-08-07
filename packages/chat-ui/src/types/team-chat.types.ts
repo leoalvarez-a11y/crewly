@@ -118,6 +118,12 @@ export interface ConversationRow {
    * through to AgentStatusBadge for live presence subscription.
    */
   agentSession?: string;
+  /** Live execution state supplied by the host for an agent DM. */
+  agentWorkingStatus?: 'idle' | 'in_progress';
+  /** Whether the underlying agent runtime/session is available. */
+  agentStatus?: 'active' | 'inactive' | 'suspended' | 'starting' | 'started' | 'activating' | 'error';
+  /** Most recent heartbeat/activity timestamp reported by the runtime. */
+  agentLastActivityAt?: string | null;
   /**
    * Optional short role tag rendered as an inline pill next to the title —
    * e.g. `Lead` to mark a team lead inside the members list. ADDITIVE and

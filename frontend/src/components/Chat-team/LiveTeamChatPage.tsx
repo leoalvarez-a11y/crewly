@@ -165,6 +165,12 @@ export interface DirectoryAgentEntry {
   teamName?: string;
   /** Agent's role (e.g. `content-strategist`) — shown under the name. */
   role?: string;
+  /** Live work state, refreshed by the host heartbeat poll. */
+  workingStatus?: 'idle' | 'in_progress';
+  /** Runtime lifecycle state used to distinguish thinking from stopped. */
+  agentStatus?: 'active' | 'inactive' | 'suspended' | 'starting' | 'started' | 'activating' | 'error';
+  /** Last runtime activity timestamp, when available. */
+  lastActivityCheck?: string | null;
 }
 
 export function LiveTeamChatPage({
@@ -345,6 +351,9 @@ function LiveTeamChatPageBody({
     const roleBySession = new Map(
       directoryAgents.map((a) => [a.agentSession, a.role] as const),
     );
+    const activityBySession = new Map(
+      directoryAgents.map((a) => [a.agentSession, a] as const),
+    );
     // Agents that lead ANY team — the per-team rosters are gone, so we surface
     // the lead signal as a badge in the flat DM list instead. A lead is anyone
     // configured as a team's leader OR whose role is `team-leader` (so every
@@ -354,11 +363,20 @@ function LiveTeamChatPageBody({
     const isLeadRole = (role?: string): boolean => role === 'team-leader';
     const withMeta = (r: ConversationRow): ConversationRow => {
       const role = r.agentSession ? roleBySession.get(r.agentSession) : undefined;
+      const activity = r.agentSession ? activityBySession.get(r.agentSession) : undefined;
       const isLead =
         (!!r.agentSession && leadSessions.has(r.agentSession)) || isLeadRole(role);
       let row = r;
       if (role) row = { ...row, subtitle: role };
       if (isLead) row = { ...row, badge: 'Lead' };
+      if (activity) {
+        row = {
+          ...row,
+          agentWorkingStatus: activity.workingStatus,
+          agentStatus: activity.agentStatus,
+          agentLastActivityAt: activity.lastActivityCheck,
+        };
+      }
       return row;
     };
 
@@ -758,6 +776,9 @@ function ConversationView({
           onReplyInThread={handleOpenThread}
           messages={messages}
           agentThinking={agentThinking}
+          agentWorkingStatus={conversation.agentWorkingStatus}
+          agentStatus={conversation.agentStatus}
+          agentLastActivityAt={conversation.agentLastActivityAt}
           hasMore={hasMore}
           onLoadMore={onLoadMore}
           emptyState={
