@@ -485,6 +485,31 @@ describe('LiveTeamChatPage — consolidated conversation list', () => {
     await waitFor(() => expect(onEnsureDm).toHaveBeenCalledWith('sess-ella'));
   });
 
+  it('hides channels and direct messages outside a scoped team', async () => {
+    const channels: Channel[] = [
+      orcDm,
+      { id: 'dm-ella', agentSession: 'sess-ella', name: 'Ella', createdAt: ISO, type: 'dm' },
+      { id: 'dm-grace', agentSession: 'sess-grace', name: 'Grace', createdAt: ISO, type: 'dm' },
+      { id: 'alpha-channel', teamId: 'team-alpha', name: 'Alpha', createdAt: ISO, type: 'channel' },
+      { id: 'beta-channel', teamId: 'team-beta', name: 'Beta', createdAt: ISO, type: 'channel' },
+    ];
+    const { client } = makeStubClient(channels);
+    render(
+      <LiveTeamChatPage
+        client={client}
+        mentionables={MENTIONABLES}
+        teams={[{ id: 'team-beta', name: 'Beta', leaderSessions: [], memberSessions: ['sess-grace'] }]}
+        directoryAgents={[{ agentSession: 'sess-grace', name: 'Grace', presence: 'online' }]}
+        scopeTeamId="team-beta"
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText('Grace')).toBeInTheDocument());
+    expect(screen.queryByText('Ella')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('conv-row-alpha-channel')).not.toBeInTheDocument();
+    expect(screen.getByTestId('conv-row-beta-channel')).toBeInTheDocument();
+  });
+
   it('pinning an agent lifts them into the Pinned group', async () => {
     window.localStorage.clear();
     const channels: Channel[] = [

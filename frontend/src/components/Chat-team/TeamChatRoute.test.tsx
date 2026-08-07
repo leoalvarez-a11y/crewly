@@ -162,6 +162,21 @@ describe('TeamChatRoute', () => {
     ]);
   });
 
+  it('scopes agents and channels to the deep-linked team', async () => {
+    teamsRef.teams = [
+      makeTeam('t1', 'Alpha', [makeMember('m1', 'Ella', 'sess-ella')]),
+      makeTeam('t2', 'Beta', [makeMember('m2', 'Grace', 'sess-grace')]),
+    ];
+    renderAt('/team-chat?team=t2');
+    await screen.findByTestId('live-team-chat');
+    const props = liveProps.mock.calls.at(-1)?.[0] as {
+      directoryAgents?: Array<{ agentSession: string }>;
+      scopeTeamId?: string | null;
+    };
+    expect((props.directoryAgents ?? []).map((agent) => agent.agentSession)).toEqual(['sess-grace']);
+    expect(props.scopeTeamId).toBe('t2');
+  });
+
   it('derives teamLabels from the teams directory', async () => {
     renderAt('/team-chat');
     await screen.findByTestId('live-team-chat');

@@ -145,6 +145,8 @@ export interface LiveTeamChatPageProps {
    * the list shows just the orchestrator + any agent DMs.
    */
   teams?: ChatTeam[];
+  /** When present, show only this team's channels and member DMs. */
+  scopeTeamId?: string | null;
   /**
    * Ensure (find-or-create) a DM channel for an agent session, returning the
    * resolved channel id. Called when the user opens a directory agent that
@@ -173,6 +175,7 @@ export function LiveTeamChatPage({
   initialConversationId,
   directoryAgents = [],
   teams = [],
+  scopeTeamId = null,
   onEnsureDm,
 }: LiveTeamChatPageProps): JSX.Element {
   return (
@@ -187,6 +190,7 @@ export function LiveTeamChatPage({
         initialConversationId={initialConversationId}
         directoryAgents={directoryAgents}
         teams={teams}
+        scopeTeamId={scopeTeamId}
         onEnsureDm={onEnsureDm}
       />
     </ChatAPIProvider>
@@ -202,6 +206,7 @@ interface BodyProps {
   initialConversationId?: string | null;
   directoryAgents: DirectoryAgentEntry[];
   teams: ChatTeam[];
+  scopeTeamId?: string | null;
   onEnsureDm?: (agentSession: string) => Promise<string>;
 }
 
@@ -231,6 +236,7 @@ function LiveTeamChatPageBody({
   initialConversationId,
   directoryAgents,
   teams,
+  scopeTeamId,
   onEnsureDm,
 }: BodyProps): JSX.Element {
   const { channels, loading: channelsLoading, error: channelsError, refresh } = useChannels();
@@ -238,13 +244,29 @@ function LiveTeamChatPageBody({
   const pinnedChats = usePinnedChats();
   const [showCreateGroup, setShowCreateGroup] = useState(false);
 
+  const scopedAgentSessions = useMemo(
+    () => new Set(directoryAgents.map((agent) => agent.agentSession)),
+    [directoryAgents],
+  );
+
   // Merge the agent directory into the channel list so EVERY agent appears in
   // the DM list — even offline ones with no channel yet. Agents that already
   // have a real DM channel win; the rest get a synthetic row whose DM is
   // created on first open (see handleSelectConversation).
   const mergedChannels = useMemo<Channel[]>(() => {
+    const visibleChannels = scopeTeamId
+      ? channels.filter((channel) => {
+          const type = channel.type ?? 'dm';
+          if (type === 'dm') {
+            return channel.agentSession === ORCHESTRATOR_SESSION
+              || (!!channel.agentSession && scopedAgentSessions.has(channel.agentSession));
+          }
+          if (type === 'channel') return channel.teamId === scopeTeamId;
+          return false;
+        })
+      : channels;
     const dmSessions = new Set(
-      channels
+      visibleChannels
         .filter((c) => (c.type ?? 'dm') === 'dm' && c.agentSession)
         .map((c) => c.agentSession),
     );
@@ -262,8 +284,8 @@ function LiveTeamChatPageBody({
         presence:
           a.presence === 'online' ? 'online' : a.presence === 'busy' ? 'busy' : 'offline',
       }));
-    return synthetic.length > 0 ? [...channels, ...synthetic] : channels;
-  }, [channels, directoryAgents]);
+    return synthetic.length > 0 ? [...visibleChannels, ...synthetic] : visibleChannels;
+  }, [channels, directoryAgents, scopeTeamId, scopedAgentSessions]);
 
   const [activeConversationId, setActiveConversationId] = useState<string | null>(
     initialConversationId ?? null,

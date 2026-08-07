@@ -88,9 +88,14 @@ export function TeamChatRoute(): JSX.Element {
 
   const mode = resolveChatMode();
   const backendURL = mode === 'real' ? resolveBackendURL() : undefined;
+  const teamParam = searchParams.get(TEAM_QUERY_PARAM) || null;
+  const scopedTeams = useMemo(
+    () => teamParam ? teams.filter((team) => team.id === teamParam) : teams,
+    [teamParam, teams],
+  );
 
-  const teamLabels = useMemo(() => buildTeamLabels(teams), [teams]);
-  const mentionables = useMemo(() => buildMentionables(teams), [teams]);
+  const teamLabels = useMemo(() => buildTeamLabels(scopedTeams), [scopedTeams]);
+  const mentionables = useMemo(() => buildMentionables(scopedTeams), [scopedTeams]);
 
   // Full agent directory → shown in the DM list (online + offline) so every
   // agent is reachable. Derived from the teams the hook already fetched, so
@@ -99,7 +104,7 @@ export function TeamChatRoute(): JSX.Element {
   const directoryAgents = useMemo<DirectoryAgentEntry[]>(() => {
     const seen = new Set<string>();
     const out: DirectoryAgentEntry[] = [];
-    for (const team of teams) {
+    for (const team of scopedTeams) {
       for (const member of team.members ?? []) {
         const session = member.sessionName;
         if (!session || seen.has(session)) continue;
@@ -114,13 +119,13 @@ export function TeamChatRoute(): JSX.Element {
       }
     }
     return out;
-  }, [teams]);
+  }, [scopedTeams]);
 
   // Teams for the workspace rail: identity + lead/member sessions. The lead is
   // a member listed in `leaderIds` (or the deprecated `leaderId`), or a member
   // at hierarchy level 1.
   const chatTeams = useMemo<ChatTeam[]>(() => {
-    return teams.map((t) => {
+    return scopedTeams.map((t) => {
       const leaderIds = t.leaderIds?.length ? t.leaderIds : t.leaderId ? [t.leaderId] : [];
       const leadIdSet = new Set(leaderIds);
       const members = t.members ?? [];
@@ -130,9 +135,7 @@ export function TeamChatRoute(): JSX.Element {
       const memberSessions = members.filter((m) => m.sessionName).map((m) => m.sessionName);
       return { id: t.id, name: t.name, leaderSessions, memberSessions, parentTeamId: t.parentTeamId };
     });
-  }, [teams]);
-
-  const teamParam = searchParams.get(TEAM_QUERY_PARAM) || null;
+  }, [scopedTeams]);
 
   // Find-or-create a DM for an agent the user opens from the directory.
   const onEnsureDm = useCallback(
@@ -207,6 +210,7 @@ export function TeamChatRoute(): JSX.Element {
       initialConversationId={initialConversationId}
       directoryAgents={directoryAgents}
       teams={chatTeams}
+      scopeTeamId={teamParam}
       onEnsureDm={onEnsureDm}
     />
   );

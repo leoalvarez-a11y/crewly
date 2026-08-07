@@ -125,6 +125,11 @@ export function verifyHs256Token(token: string, secret: string): JwtPayload | nu
 export const requireAuth = (req: Request, res: Response, next: NextFunction): void => {
   const jwtSecret = process.env['CREWLY_JWT_SECRET'];
   const isProduction = process.env['NODE_ENV'] === 'production';
+  const remoteAddress = req.socket?.remoteAddress?.toLowerCase();
+  const isLoopback = remoteAddress === '127.0.0.1'
+    || remoteAddress === '::1'
+    || remoteAddress === '::ffff:127.0.0.1';
+  const allowNativeLocalAuth = process.env['CREWLY_LOCAL_AUTH'] === '1' && isLoopback;
 
   // Extract Bearer token
   const authHeader = req.headers.authorization;
@@ -149,6 +154,19 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction): vo
       plan: payload.plan,
     };
 
+    next();
+    return;
+  }
+
+  // The native Windows launcher serves a local-only dashboard without a login
+  // screen. Permit its explicit local profile only for direct loopback clients;
+  // LAN/remote requests still fail closed in production.
+  if (allowNativeLocalAuth) {
+    (req as AuthenticatedRequest).user = {
+      userId: 'local-windows-user',
+      email: 'local@crewly.local',
+      plan: 'max',
+    };
     next();
     return;
   }

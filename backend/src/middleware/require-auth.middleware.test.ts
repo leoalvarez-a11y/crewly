@@ -91,6 +91,7 @@ describe('require-auth middleware', () => {
 
     beforeEach(() => {
       mockNext.mockClear();
+      delete process.env['CREWLY_LOCAL_AUTH'];
       jsonFn = jest.fn();
       statusFn = jest.fn().mockReturnValue({ json: jsonFn });
       mockReq = { headers: {} };
@@ -113,7 +114,36 @@ describe('require-auth middleware', () => {
 
     it('should block requests in production without JWT_SECRET', () => {
       delete process.env['CREWLY_JWT_SECRET'];
+      delete process.env['CREWLY_LOCAL_AUTH'];
       process.env['NODE_ENV'] = 'production';
+
+      requireAuth(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockNext).not.toHaveBeenCalled();
+      expect(statusFn).toHaveBeenCalledWith(500);
+    });
+
+    it('should allow the explicit native local profile only over loopback', () => {
+      delete process.env['CREWLY_JWT_SECRET'];
+      process.env['CREWLY_LOCAL_AUTH'] = '1';
+      process.env['NODE_ENV'] = 'production';
+      mockReq.socket = { remoteAddress: '127.0.0.1' } as any;
+
+      requireAuth(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalledTimes(1);
+      expect((mockReq as AuthenticatedRequest).user).toEqual({
+        userId: 'local-windows-user',
+        email: 'local@crewly.local',
+        plan: 'max',
+      });
+    });
+
+    it('should keep the native local profile closed to non-loopback clients', () => {
+      delete process.env['CREWLY_JWT_SECRET'];
+      process.env['CREWLY_LOCAL_AUTH'] = '1';
+      process.env['NODE_ENV'] = 'production';
+      mockReq.socket = { remoteAddress: '192.168.1.25' } as any;
 
       requireAuth(mockReq as Request, mockRes as Response, mockNext);
 
