@@ -63,6 +63,7 @@ function buildWorkItem(overrides: Partial<WorkItem> = {}): WorkItem {
     cost: 0,
     metadata: {
       teamId: 'team-product',
+      projectRoot: 'C:\\projects\\crewly-product',
       triggerSource: 'event',
     },
     ...overrides,
@@ -263,6 +264,8 @@ describe('EventToWorkItemBridge', () => {
       expect(verifyWI.metadata?.idempotencyKey).toBe(verifyWI.id);
       // V6: triggerSource = 'event' on bridge-created WI
       expect(verifyWI.metadata?.triggerSource).toBe('event');
+      expect(verifyWI.metadata?.teamId).toBe('team-product');
+      expect(verifyWI.metadata?.projectRoot).toBe('C:\\projects\\crewly-product');
       bridge.stop();
     });
 

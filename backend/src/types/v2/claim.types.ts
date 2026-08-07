@@ -72,6 +72,8 @@ export interface TaskClaim {
   endedAt?: string;
   /** Reason for release or revocation */
   endReason?: string;
+  /** True when claiming a broadcast WorkItem temporarily assigned its target. */
+  targetWasUnassigned?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -86,6 +88,8 @@ export interface CreateClaimInput {
   agentId: string;
   leaseDurationMs?: number;
   maxExtensions?: number;
+  /** Whether the WorkItem had no explicit target before this claim. */
+  targetWasUnassigned?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -247,6 +251,7 @@ export function createTaskClaim(input: CreateClaimInput): TaskClaim {
     extensionCount: 0,
     maxExtensions: input.maxExtensions ?? DEFAULT_MAX_EXTENSIONS,
     leaseDurationMs: leaseDuration,
+    targetWasUnassigned: input.targetWasUnassigned,
   };
 }
 

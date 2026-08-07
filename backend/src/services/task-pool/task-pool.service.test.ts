@@ -911,8 +911,8 @@ describe('TaskPoolService', () => {
       );
     });
 
-    it('allows another agent to claim after release', async () => {
-      const wi = makeWorkItem();
+    it('allows another agent to claim a broadcast item after release', async () => {
+      const wi = makeWorkItem({ target: undefined });
       await service.addToPool(wi);
       await service.claimFromPool('agent-leo');
       await service.releaseBack(wi.id, 'busy');
@@ -920,6 +920,19 @@ describe('TaskPoolService', () => {
       const result = await service.claimFromPool('agent-max');
       expect(result).not.toBeNull();
       expect(result!.claim.agentId).toBe('agent-max');
+    });
+
+    it('preserves an explicit target when a claim is released', async () => {
+      const wi = makeWorkItem({ target: 'agent-leo' });
+      await service.addToPool(wi);
+      await service.claimFromPool('agent-leo');
+
+      await service.releaseBack(wi.id, 'lease expired');
+
+      const stored = (await service.getAllItems()).find((item) => item.id === wi.id)!;
+      expect(stored.status).toBe('queued');
+      expect(stored.target).toBe('agent-leo');
+      await expect(service.claimFromPool('agent-max')).resolves.toBeNull();
     });
   });
 

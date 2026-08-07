@@ -251,6 +251,19 @@ export class AgentAutoClaimService {
     const now = Date.now();
 
     for (const wi of availableItems) {
+      // Explicit routing is authoritative. Avoid even scoring work for a
+      // different session; claimSpecificItem repeats this check atomically.
+      if (wi.target && wi.target !== agentSessionName) continue;
+
+      const workItemTeamId = wi.metadata?.['teamId'];
+      if (
+        typeof workItemTeamId === 'string' &&
+        workItemTeamId.length > 0 &&
+        workItemTeamId !== agentHealth.teamId
+      ) {
+        continue;
+      }
+
       const waitTimeMs = now - new Date(wi.createdAt).getTime();
       const breakdown = computeAgentScore(wi, agentHealth, waitTimeMs);
       const score = breakdown.skillMatch + breakdown.urgency + breakdown.contextFamiliarity - breakdown.loadPenalty;

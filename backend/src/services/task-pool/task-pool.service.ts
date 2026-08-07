@@ -760,6 +760,7 @@ export class TaskPoolService {
       }
 
       const selected = candidates[0];
+      const targetWasUnassigned = !selected.target;
 
       // TRANS-2: route the queued → running flip through the guarded
       // transitionStatus helper so internal callers are subject to the
@@ -793,6 +794,7 @@ export class TaskPoolService {
       const claimInput: CreateClaimInput = {
         workItemId: selected.id,
         agentId,
+        targetWasUnassigned,
       };
       const claim = createTaskClaim(claimInput);
       await this.storage.addClaim(claim);
@@ -844,6 +846,7 @@ export class TaskPoolService {
 
       const workItem = await this.storage.findWorkItem(workItemId);
       if (!workItem || workItem.status !== 'queued') return null;
+      const targetWasUnassigned = !workItem.target;
 
       // Hygiene #3 — target-respect gate. Refuse to claim a WI whose
       // existing target is set to a different agent. This prevents the
@@ -880,7 +883,11 @@ export class TaskPoolService {
       );
       if (!claimedItem) return null;
 
-      const claimInput: CreateClaimInput = { workItemId, agentId };
+      const claimInput: CreateClaimInput = {
+        workItemId,
+        agentId,
+        targetWasUnassigned,
+      };
       const claim = createTaskClaim(claimInput);
       await this.storage.addClaim(claim);
       await this.storage.flush();
@@ -930,7 +937,10 @@ export class TaskPoolService {
     const wasBlocked = workItem.status === 'blocked';
     await this.transitionStatus(workItemId, 'queued', 'system', (wi) => {
       wi.startedAt = undefined;
-      if (!wasBlocked) {
+      // Only broadcast work may return to the shared pool. An explicit target
+      // is routing intent and must survive lease expiry/release; clearing it
+      // allowed unrelated agents and projects to inherit stale work.
+      if (!wasBlocked && claim?.targetWasUnassigned === true) {
         wi.target = undefined;
       }
       wi.retryCount += 1;

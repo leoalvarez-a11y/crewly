@@ -137,6 +137,47 @@ describe('AgentAutoClaimService', () => {
       expect(result).toBeNull();
     });
 
+    it('does not score or claim work explicitly targeted to another agent', async () => {
+      const service = AgentAutoClaimService.getInstance();
+      mockGetAvailableItems.mockResolvedValueOnce([
+        {
+          id: 'wi-other-agent',
+          title: 'Unrelated verification',
+          type: 'review',
+          status: 'queued',
+          target: 'crewly-orc',
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+
+      const result = await service.tryAutoClaimForAgent('team-a-lead');
+
+      expect(result).toBeNull();
+      expect(mockClaimSpecificItem).not.toHaveBeenCalled();
+    });
+
+    it('does not claim team-bound work for an agent outside that team', async () => {
+      const service = AgentAutoClaimService.getInstance();
+      service.initialize({ on: jest.fn() }, async () => new Map([
+        ['team-a-lead', { sessionName: 'team-a-lead', status: 'active', teamId: 'team-a' }],
+      ]));
+      mockGetAvailableItems.mockResolvedValueOnce([
+        {
+          id: 'wi-team-b',
+          title: 'Team B task',
+          type: 'delegate',
+          status: 'queued',
+          metadata: { teamId: 'team-b' },
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+
+      const result = await service.tryAutoClaimForAgent('team-a-lead');
+
+      expect(result).toBeNull();
+      expect(mockClaimSpecificItem).not.toHaveBeenCalled();
+    });
+
     // 2026-05-12 dogfood regression: AutoClaim happily claimed
     // `request:<rid>:respond_to_user` tracker WIs for crewly-orc, then
     // `WorkItemDispatchSubscriber.dispatchTo` short-circuited on the

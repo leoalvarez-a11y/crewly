@@ -766,6 +766,15 @@ export class EventToWorkItemBridge {
         // declaration as the source of truth — factory only fills if the
         // handler omitted (defensive default).
         triggerSource, // V6 — never 'cron' for bridge-created WIs
+        // Derivative work remains bound to its source team/project even after
+        // retries. Dropping this affinity made old fixture reviews appear as
+        // global work to unrelated team leaders.
+        ...(args.sourceWI?.metadata?.['teamId']
+          ? { teamId: args.sourceWI.metadata['teamId'] }
+          : {}),
+        ...(args.sourceWI?.metadata?.['projectRoot']
+          ? { projectRoot: args.sourceWI.metadata['projectRoot'] }
+          : {}),
         ...args.extraMetadata,
       },
     };
