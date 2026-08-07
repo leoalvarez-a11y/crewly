@@ -540,7 +540,25 @@ export async function activateAgentBySession(
   sessionName: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const found = await context.storageService.findMemberBySessionName(sessionName);
+    let found = await context.storageService.findMemberBySessionName(sessionName);
+    // stopTeamMember clears member.sessionName, while the persisted DM channel
+    // remains bound to the deterministic session id. Reconnect that channel to
+    // its member instead of making activate-on-send permanently fail.
+    if (!found) {
+      const teams = await context.storageService.getTeams();
+      for (const team of teams) {
+        const teamSlug = team.name.toLowerCase().replace(/\s+/g, '-');
+        const member = team.members.find((candidate) => {
+          const memberSlug = candidate.name.toLowerCase().replace(/\s+/g, '-');
+          const deterministicSession = `${teamSlug}-${memberSlug}-${candidate.id.substring(0, 8)}`;
+          return deterministicSession === sessionName;
+        });
+        if (member) {
+          found = { team, member };
+          break;
+        }
+      }
+    }
     if (!found) {
       return { success: false, error: `No team member found for session '${sessionName}'` };
     }
