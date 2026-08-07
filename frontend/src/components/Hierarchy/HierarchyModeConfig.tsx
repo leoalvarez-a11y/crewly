@@ -130,6 +130,7 @@ export const HierarchyModeConfig: React.FC<HierarchyModeConfigProps> = ({
         </div>
 
         <button
+          type="button"
           role="switch"
           aria-checked={config.hierarchical}
           aria-label="Toggle hierarchical mode"

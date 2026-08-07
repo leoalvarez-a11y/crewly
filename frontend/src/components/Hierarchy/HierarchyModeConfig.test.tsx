@@ -189,6 +189,23 @@ describe('HierarchyModeConfig', () => {
       );
     });
 
+    it('should not submit a parent form when toggled', () => {
+      const handleSubmit = vi.fn((event: React.FormEvent) => event.preventDefault());
+      render(
+        <form onSubmit={handleSubmit}>
+          <HierarchyModeConfig
+            config={defaultConfig}
+            onChange={vi.fn()}
+            members={createTestMembers()}
+          />
+        </form>
+      );
+
+      fireEvent.click(screen.getByRole('switch'));
+      expect(handleSubmit).not.toHaveBeenCalled();
+      expect(screen.getByRole('switch')).toHaveAttribute('type', 'button');
+    });
+
     it('should call onChange with hierarchical=false when toggled off', () => {
       const handleChange = vi.fn();
       render(
