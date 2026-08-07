@@ -102,7 +102,27 @@ export function reconcileMessage(prev: Message[], incoming: Message): Message[] 
  * the order the API happens to return.
  */
 export function toAscendingBySeq(messages: Message[]): Message[] {
-  return [...messages].sort((a, b) => a.seq - b.seq);
+  return [...messages].sort((a, b) => {
+    // Optimistic messages use seq=-1 until the server confirms them. Keep
+    // those at the visible tail instead of moving a freshly-sent prompt to
+    // the top of a long conversation while an overlapping REST read settles.
+    const aSeq = a.seq < 0 ? Number.POSITIVE_INFINITY : a.seq;
+    const bSeq = b.seq < 0 ? Number.POSITIVE_INFINITY : b.seq;
+    return aSeq - bSeq;
+  });
+}
+
+/**
+ * Merge a REST snapshot into the live timeline without discarding messages
+ * that arrived optimistically or over WebSocket while the request was in
+ * flight. This also makes periodic REST reconciliation safe and idempotent.
+ */
+export function mergeFetchedMessages(prev: Message[], fetched: Message[]): Message[] {
+  let merged = prev;
+  for (const message of fetched) {
+    merged = reconcileMessage(merged, message);
+  }
+  return toAscendingBySeq(merged);
 }
 
 /**
@@ -171,7 +191,10 @@ export function useMessages(channelId: string | null): UseMessagesResult {
       .listMessages(channelId)
       .then((page) => {
         if (cancelled) return;
-        setMessages(toAscendingBySeq(page.messages));
+        // Do not replace the timeline wholesale: a prompt or WS response may
+        // have arrived after this request started. Replacing here made recent
+        // messages disappear until a manual reload.
+        setMessages((prev) => mergeFetchedMessages(prev, page.messages));
         cursorRef.current = page.nextCursor;
         setHasMore(page.nextCursor !== null);
       })
@@ -185,6 +208,49 @@ export function useMessages(channelId: string | null): UseMessagesResult {
 
     return () => {
       cancelled = true;
+    };
+  }, [channelId, client]);
+
+  // WebSocket replay is the primary live path. Reconcile the latest REST page
+  // as a low-frequency safety net so a suspended tab, backend restart, or
+  // transient socket failure cannot leave the visible chat permanently stale.
+  useEffect(() => {
+    if (!channelId) return;
+
+    let cancelled = false;
+    let syncing = false;
+    const syncLatest = async () => {
+      if (cancelled || syncing) return;
+      syncing = true;
+      try {
+        const page = await client.listMessages(channelId);
+        if (cancelled) return;
+        setMessages((prev) => {
+          const next = mergeFetchedMessages(prev, page.messages);
+          setAgentThinking(deriveAgentThinking(next));
+          return next;
+        });
+      } catch {
+        // The normal error surface belongs to the initial load/send paths.
+        // A fallback reconciliation miss will retry on the next interval.
+      } finally {
+        syncing = false;
+      }
+    };
+
+    const interval = window.setInterval(syncLatest, 10_000);
+    const handleFocus = () => void syncLatest();
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') void syncLatest();
+    };
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [channelId, client]);
 

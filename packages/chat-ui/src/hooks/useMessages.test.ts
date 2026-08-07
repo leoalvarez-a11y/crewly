@@ -8,6 +8,7 @@ import {
   reconcileMessage,
   deriveAgentThinking,
   toAscendingBySeq,
+  mergeFetchedMessages,
   selectRootMessages,
   selectThreadReplies,
 } from './useMessages';
@@ -251,6 +252,39 @@ describe('toAscendingBySeq', () => {
     expect(asc.map((m) => m.seq)).toEqual([1, 2, 24, 25, 26]);
     // Does not mutate the input.
     expect(desc.map((m) => m.seq)).toEqual([26, 25, 24, 2, 1]);
+  });
+
+  it('keeps an optimistic prompt at the visible tail', () => {
+    const optimistic = { ...mk(-1), id: 'pending', clientMessageId: 'pending' };
+    expect(toAscendingBySeq([mk(2), optimistic, mk(1)]).map((m) => m.id)).toEqual([
+      'm-1',
+      'm-2',
+      'pending',
+    ]);
+  });
+});
+
+describe('mergeFetchedMessages', () => {
+  const mk = (seq: number, id = `m-${seq}`): Message => ({
+    id,
+    channelId: 'c1',
+    seq,
+    author: { role: seq === 3 ? 'user' : 'agent', id: seq === 3 ? 'me' : 'agent' },
+    content: `msg ${seq}`,
+    createdAt: '2026-04-25T01:00:00.000Z',
+    mentions: [],
+  });
+
+  it('does not erase a live message when an older REST request settles later', () => {
+    const live = [mk(1), mk(2), mk(3)];
+    const staleFetch = [mk(2), mk(1)];
+    expect(mergeFetchedMessages(live, staleFetch).map((m) => m.seq)).toEqual([1, 2, 3]);
+  });
+
+  it('adds messages missed by the WebSocket without creating duplicates', () => {
+    const visible = [mk(1), mk(2)];
+    const latestFetch = [mk(4), mk(3), mk(2), mk(1)];
+    expect(mergeFetchedMessages(visible, latestFetch).map((m) => m.seq)).toEqual([1, 2, 3, 4]);
   });
 });
 
