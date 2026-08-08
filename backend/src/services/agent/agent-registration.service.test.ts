@@ -420,6 +420,22 @@ describe('AgentRegistrationService', () => {
 				expect(activationPrompt!.indexOf('IMMEDIATE USER CHAT REQUEST')).toBeLessThan(
 					activationPrompt!.indexOf('Register test-session as developer')
 				);
+
+				// A runtime can exit after accepting the bootstrap but before replying.
+				// Re-registration must carry the same user request instead of losing it.
+				await service.initializeAgentWithRegistration(
+					'test-session',
+					'developer',
+					'/test/path',
+					90000,
+					undefined,
+					RUNTIME_TYPES.CODEX_CLI
+				);
+				await jest.advanceTimersByTimeAsync(1000);
+				const replayedPrompts = (fsPromises.writeFile as jest.Mock).mock.calls
+					.map((call: any[]) => String(call[1]))
+					.filter((content: string) => content.includes('[CHAT:chan-1] status real y ETA'));
+				expect(replayedPrompts.length).toBeGreaterThanOrEqual(2);
 		});
 	});
 

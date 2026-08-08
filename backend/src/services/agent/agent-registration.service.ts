@@ -153,7 +153,8 @@ export class AgentRegistrationService {
 	// waits on this barrier before delivering the user's message, otherwise the
 	// registration instruction and chat prompt race for the same TUI input box.
 	private registrationDeliveryPromises = new Map<string, Promise<boolean>>();
-	private activationPriorityMessages = new Map<string, string>();
+	private activationPriorityMessages = new Map<string, { message: string; expiresAt: number }>();
+	private embeddedActivationPriorityMessages = new Set<string>();
 
 	// Background stuck-message detector timer
 	private stuckMessageDetectorTimer: ReturnType<typeof setInterval> | null = null;
@@ -1265,11 +1266,16 @@ export class AgentRegistrationService {
 
 	/** Attach the chat message that caused an offline agent to start. */
 	setActivationPriorityMessage(sessionName: string, message: string): void {
-		this.activationPriorityMessages.set(sessionName, message);
+		this.activationPriorityMessages.set(sessionName, {
+			message,
+			expiresAt: Date.now() + 5 * 60_000,
+		});
+		this.embeddedActivationPriorityMessages.delete(sessionName);
 	}
 
 	clearActivationPriorityMessage(sessionName: string): void {
 		this.activationPriorityMessages.delete(sessionName);
+		this.embeddedActivationPriorityMessages.delete(sessionName);
 	}
 
 	hasPendingRegistrationDelivery(sessionName: string): boolean {
@@ -1277,7 +1283,8 @@ export class AgentRegistrationService {
 	}
 
 	hasActivationPriorityMessage(sessionName: string): boolean {
-		return this.activationPriorityMessages.has(sessionName);
+		return this.activationPriorityMessages.has(sessionName) &&
+			!this.embeddedActivationPriorityMessages.has(sessionName);
 	}
 
 	private async sendRegistrationPromptAsync(
@@ -1295,9 +1302,17 @@ export class AgentRegistrationService {
 
 			if (controller.signal.aborted) return false;
 				let prompt = await this.loadRegistrationPrompt(role, sessionName, memberId, runtimeType);
-				const activationMessage = this.activationPriorityMessages.get(sessionName);
+				const activationEntry = this.activationPriorityMessages.get(sessionName);
+				const activationMessage = activationEntry && activationEntry.expiresAt > Date.now()
+					? activationEntry.message
+					: undefined;
+				if (activationEntry && !activationMessage) {
+					this.clearActivationPriorityMessage(sessionName);
+				}
 				if (activationMessage) {
-					this.activationPriorityMessages.delete(sessionName);
+					// Keep the request briefly so an automatic runtime restart during
+					// bootstrap can embed it again instead of silently losing it.
+					this.embeddedActivationPriorityMessages.add(sessionName);
 					const priorityPrompt = `## IMMEDIATE USER CHAT REQUEST\n` +
 						`This request caused your session to start. After completing registration, ` +
 						`answer it in chat BEFORE resuming, claiming, or executing any other work.\n\n` +
