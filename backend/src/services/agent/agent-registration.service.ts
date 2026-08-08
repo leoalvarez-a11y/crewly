@@ -1294,15 +1294,19 @@ export class AgentRegistrationService {
 			this.logger.info('Loading registration prompt', { sessionName, role, runtimeType });
 
 			if (controller.signal.aborted) return false;
-			let prompt = await this.loadRegistrationPrompt(role, sessionName, memberId, runtimeType);
-			const activationMessage = this.activationPriorityMessages.get(sessionName);
-			if (activationMessage) {
-				this.activationPriorityMessages.delete(sessionName);
-				prompt += `\n\n## IMMEDIATE USER CHAT REQUEST\n` +
-					`This request caused your session to start. After completing registration, ` +
-					`answer it in chat BEFORE resuming, claiming, or executing any other work.\n\n` +
-					`<user_chat_request>\n${activationMessage}\n</user_chat_request>\n`;
-			}
+				let prompt = await this.loadRegistrationPrompt(role, sessionName, memberId, runtimeType);
+				const activationMessage = this.activationPriorityMessages.get(sessionName);
+				if (activationMessage) {
+					this.activationPriorityMessages.delete(sessionName);
+					const priorityPrompt = `## IMMEDIATE USER CHAT REQUEST\n` +
+						`This request caused your session to start. After completing registration, ` +
+						`answer it in chat BEFORE resuming, claiming, or executing any other work.\n\n` +
+						`<user_chat_request>\n${activationMessage}\n</user_chat_request>\n`;
+					// Put the user request first. Runtime file readers commonly truncate long
+					// bootstrap prompts, so an appended request at line 800+ was invisible
+					// until after lengthy registration and unrelated work discovery.
+					prompt = `${priorityPrompt}\n---\n\n${prompt}`;
+				}
 
 			this.logger.info('Registration prompt loaded, sending to agent', {
 				sessionName, role, runtimeType, promptLength: prompt.length,

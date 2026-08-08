@@ -412,10 +412,14 @@ describe('AgentRegistrationService', () => {
 
 			const writtenPrompts = (fsPromises.writeFile as jest.Mock).mock.calls
 				.map((call: any[]) => String(call[1]));
-			expect(writtenPrompts.some((content: string) =>
-				content.includes('IMMEDIATE USER CHAT REQUEST') &&
-				content.includes('[CHAT:chan-1] status real y ETA')
-			)).toBe(true);
+				const activationPrompt = writtenPrompts.find((content: string) =>
+					content.includes('IMMEDIATE USER CHAT REQUEST') &&
+					content.includes('[CHAT:chan-1] status real y ETA')
+				);
+				expect(activationPrompt).toBeDefined();
+				expect(activationPrompt!.indexOf('IMMEDIATE USER CHAT REQUEST')).toBeLessThan(
+					activationPrompt!.indexOf('Register test-session as developer')
+				);
 		});
 	});
 
