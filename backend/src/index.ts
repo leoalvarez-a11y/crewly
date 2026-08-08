@@ -96,6 +96,7 @@ import { createMessagingRouter } from './controllers/messaging/messaging.routes.
 import { SystemResourceAlertService } from './services/monitoring/system-resource-alert.service.js';
 import { TokenUsageService } from './services/monitoring/token-usage.service.js';
 import { agentHeartbeatMiddleware } from './middleware/agent-heartbeat.middleware.js';
+import { repairJsonTextEncoding } from './middleware/text-encoding.middleware.js';
 import { RedisCacheService } from './services/cache/redis-cache.service.js';
 import { OrchestratorRestartService } from './services/orchestrator/orchestrator-restart.service.js';
 import { setOrchestratorSetupDependencies } from './services/orchestrator/orchestrator-setup.service.js';
@@ -1044,6 +1045,10 @@ void (async () => {
 	}
 
 	private configureRoutes(): void {
+		// Normalize display text at the final API boundary, including legacy stores
+		// and integrations that may have persisted damaged Windows PTY output.
+		this.app.use('/api', repairJsonTextEncoding);
+
 		// Agent heartbeat middleware - any API call with X-Agent-Session header updates heartbeat
 		this.app.use('/api', agentHeartbeatMiddleware);
 

@@ -136,6 +136,20 @@ export function repairTextEncoding(value: string): string {
   return repaired.normalize('NFC');
 }
 
+/** Recursively repair strings in JSON-shaped API payloads without mutating them. */
+export function repairTextEncodingDeep<T>(value: T): T {
+  if (typeof value === 'string') return repairTextEncoding(value) as T;
+  if (Array.isArray(value)) return value.map(repairTextEncodingDeep) as T;
+  if (value && typeof value === 'object') {
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) return value;
+    return Object.fromEntries(
+      Object.entries(value).map(([key, child]) => [key, repairTextEncodingDeep(child)]),
+    ) as T;
+  }
+  return value;
+}
+
 /** True when text still contains corruption that cannot be inferred safely. */
 export function hasEncodingDamage(value: string): boolean {
   return DAMAGE_MARKERS.test(value) || damageScore(value) > 0;
