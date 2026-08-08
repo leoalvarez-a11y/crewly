@@ -582,6 +582,17 @@ describe('ChatV2Service', () => {
       expect(msg.senderId).toBe('sess-a');
     });
 
+    it('repairs Windows PTY encoding damage before persistence', () => {
+      const ch = createSam();
+      const msg = service.sendMessage({
+        channelId: ch.id,
+        principal: agentPrincipal,
+        content: 'La ejecuci�n est� activa; despu�s responder� aqu�.',
+      });
+
+      expect(msg.content).toBe('La ejecución está activa; después responderé aquí.');
+    });
+
     it('rejects messages exceeding the byte cap with payload_too_large', () => {
       const ch = createSam();
       const oversize = 'a'.repeat(40000);

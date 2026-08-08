@@ -19,6 +19,7 @@ Usage:
 Options:
   --conversation | -C   Chat conversation ID (optional — defaults to current)
   --text         | -t   Message text (optional when piping stdin)
+  --text-base64         UTF-8 message encoded as Base64 (safe across Windows PTY)
   --text-file           Read message text from the specified file path
   --sender       | -s   Sender name (default: Orchestrator)
   --sender-type         Sender type: orchestrator, agent, system (default: orchestrator)
@@ -47,6 +48,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --text|-t)
       TEXT="$2"
+      shift 2
+      ;;
+    --text-base64)
+      TEXT="$(printf '%s' "$2" | base64 --decode)"
       shift 2
       ;;
     --text-file)
@@ -102,7 +107,7 @@ if [ -n "$INPUT_JSON" ]; then
 fi
 
 if [ -z "$TEXT" ]; then
-  error_exit "Message text is required. Pass --text, --text-file, pipe stdin, or include it in the JSON payload."
+  error_exit "Message text is required. Pass --text, --text-base64, --text-file, pipe stdin, or include it in the JSON payload."
 fi
 
 # Convert literal \n sequences to real newlines

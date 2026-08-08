@@ -75,6 +75,8 @@ describe('ChatV2DispatcherService', () => {
       expect(prompt).toContain('`reply-chat`');
       expect(prompt).toContain('conversationId="chan-1"');
       expect(prompt).toContain('CHAT VISIBILITY CONTRACT (MANDATORY)');
+      expect(prompt).toContain('--text-base64 "$encoded"');
+      expect(prompt).toContain('[Text.Encoding]::UTF8.GetBytes($reply)');
       expect(prompt).toContain('Before your first tool or command');
       expect(prompt).toContain('at least once every 60 seconds');
       expect(prompt).toContain('full user-facing answer or the exact blocker');

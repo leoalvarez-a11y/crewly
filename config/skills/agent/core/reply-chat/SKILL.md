@@ -61,5 +61,19 @@ bash config/skills/agent/core/reply-chat/execute.sh \
 |------|-------|-------------|
 | `--conversation` | `-C` | Chat conversation ID (optional — defaults to current) |
 | `--text` | `-t` | Message text |
+| `--text-base64` | | UTF-8 message encoded as Base64 (recommended from Windows PowerShell) |
 | `--sender` | `-s` | Sender name (required) |
 | `--sender-type` | | Sender type (default: agent) |
+
+### Windows PowerShell (UTF-8 seguro)
+
+Do not pass accented text directly from Windows PowerShell to Bash. Encode the
+message first so only ASCII crosses the PowerShell/Bash boundary:
+
+```powershell
+$reply = @'
+Actualización visible para el usuario.
+'@
+$encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($reply))
+bash config/skills/agent/core/reply-chat/execute.sh --conversation "conv-abc123" --sender "dev-1" --text-base64 "$encoded"
+```

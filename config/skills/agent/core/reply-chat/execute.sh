@@ -20,6 +20,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --conversation|-C) CONVERSATION_ID="$2"; shift 2 ;;
     --text|-t) TEXT="$2"; shift 2 ;;
+    --text-base64) TEXT="$(printf '%s' "$2" | base64 --decode)"; shift 2 ;;
     --text-file) TEXT="$(cat "$2")"; shift 2 ;;
     --sender|-s) SENDER_NAME="$2"; shift 2 ;;
     --sender-type) SENDER_TYPE="$2"; shift 2 ;;

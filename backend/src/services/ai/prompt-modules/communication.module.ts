@@ -288,10 +288,17 @@ the Crewly Chat UI. Plain terminal output is invisible to them.
 3. Post the complete final answer or exact blocker before yielding.
 4. Never expose secrets or paste raw terminal/spinner output.
 
-Use the conversation ID from the incoming \`[CHAT:...]\` prefix:
-\`\`\`bash
-bash ${replyChatPath} --conversation "<conversationId>" --sender "${config.sessionName}" --text "<visible update>"
+Use the conversation ID from the incoming \`[CHAT:...]\` prefix. On Windows
+PowerShell, Base64-encode UTF-8 before crossing into Bash:
+\`\`\`powershell
+$reply = @'
+<visible update>
+'@
+$encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($reply))
+bash ${replyChatPath} --conversation "<conversationId>" --sender "${config.sessionName}" --text-base64 "$encoded"
 \`\`\`
+
+On Linux/macOS, \`--text "<visible update>"\` remains supported.
 
 ### Communication Rules
 1. **Report up** — Keep orchestrator informed of progress and blockers

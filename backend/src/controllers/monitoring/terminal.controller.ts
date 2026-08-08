@@ -32,6 +32,7 @@ import {
 import type { PendingWorkSummary, HeartbeatState } from '../../services/agent/adaptive-heartbeat.service.js';
 import { ADAPTIVE_HEARTBEAT_DEFAULTS } from '../../services/agent/adaptive-heartbeat.service.js';
 import { getAgentBehaviorLogService } from '../../services/observability/agent-behavior-log.singleton.js';
+import { repairTextEncoding } from '../../utils/text-encoding.js';
 
 /**
  * Bracketed paste mode markers.
@@ -1124,7 +1125,7 @@ export async function getSessionLogs(req: Request, res: Response): Promise<void>
 		res.json({
 			success: true,
 			data: {
-				lines: lastLines,
+				lines: lastLines.map(repairTextEncoding),
 				sessionName,
 				count: lastLines.length,
 				totalLines: allLines.length,

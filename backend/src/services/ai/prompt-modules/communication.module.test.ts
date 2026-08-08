@@ -172,6 +172,8 @@ describe('CommunicationModule', () => {
 			expect(result).toContain('at least every 60 seconds');
 			expect(result).toContain('complete final answer or exact blocker');
 			expect(result).toContain('/core/reply-chat/execute.sh');
+			expect(result).toContain('--text-base64 "$encoded"');
+			expect(result).toContain('[Text.Encoding]::UTF8.GetBytes($reply)');
 		});
 
 		it('should not include orchestrator-only content', async () => {

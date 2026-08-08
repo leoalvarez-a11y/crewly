@@ -208,7 +208,8 @@ export function defaultFormatPrompt(args: FormatPromptArgs): string {
       `- While working, call \`reply-chat\` after each material evidence-gathering step and at least once every 60 seconds. Summarize: action completed, evidence/result, next action, and blocker if any.`,
       `- On completion or blockage, call \`reply-chat\` again with the full user-facing answer or the exact blocker.`,
       `- Do not paste raw terminal streams, secrets, tokens, cookies, credentials, or repetitive spinner output. Report concise, useful plumbing like Codex progress updates.`,
-      `- Use this exact routing command shape: bash config/skills/agent/core/reply-chat/execute.sh --conversation "${channelId}" --sender "${channelName}" --text "<visible update>"`,
+      `- On Windows PowerShell, preserve UTF-8 with this exact shape:\n$reply = @'\n<visible update>\n'@\n$encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($reply))\nbash config/skills/agent/core/reply-chat/execute.sh --conversation "${channelId}" --sender "${channelName}" --text-base64 "$encoded"`,
+      `- On Linux/macOS, use: bash config/skills/agent/core/reply-chat/execute.sh --conversation "${channelId}" --sender "${channelName}" --text "<visible update>"`,
     ].join('\n');
   return [
     `[CHAT:${channelId}]${idHint} <${senderId}@${channelName}>`,

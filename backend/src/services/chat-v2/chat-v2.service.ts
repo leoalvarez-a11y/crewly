@@ -15,6 +15,7 @@ import { ChannelStore } from './sqlite/channel.store.js';
 import { EventEmitter } from 'events';
 import { MessageStore } from './sqlite/message.store.js';
 import { openChatDatabase, type ChatDatabase } from './sqlite/chat-db.js';
+import { repairTextEncoding } from '../../utils/text-encoding.js';
 import {
   CHAT_CHANNEL_TYPES,
   CHAT_CONTENT_TYPES,
@@ -1222,7 +1223,7 @@ export class ChatV2Service extends EventEmitter {
   sendMessage(args: SendMessageArgs): ChatMessageDTO {
     const row = this.requireReadableChannel(args.channelId, args.principal);
 
-    const content = args.content ?? '';
+    const content = repairTextEncoding(args.content ?? '');
     if (content.length === 0) {
       throw new ChatError(CHAT_ERROR_CODES.VALIDATION, 400, 'content is required');
     }
@@ -1327,7 +1328,7 @@ export class ChatV2Service extends EventEmitter {
    * ```
    */
   recordTurn(input: RecordTurnInput): RecordTurnResult {
-    const content = input.content ?? '';
+    const content = repairTextEncoding(input.content ?? '');
     if (content.length === 0) {
       throw new ChatError(CHAT_ERROR_CODES.VALIDATION, 400, 'content is required');
     }

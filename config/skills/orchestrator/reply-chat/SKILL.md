@@ -46,6 +46,18 @@ bash config/skills/orchestrator/reply-chat/execute.sh \
   --text "Deploy complete"
 ```
 
+### Windows PowerShell with accented text
+
+Encode the message as UTF-8 before it crosses the PowerShell-to-WSL boundary:
+
+```powershell
+$message = @'
+Actualización: la ejecución terminó correctamente en México.
+'@
+$encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($message))
+bash config/skills/orchestrator/reply-chat/execute.sh --conversation "conv-abc123" --text-base64 "$encoded"
+```
+
 ### Multi-line text from stdin
 
 ```bash
@@ -71,6 +83,7 @@ bash config/skills/orchestrator/reply-chat/execute.sh '{"conversationId":"conv-a
 |------|-------|-------------|
 | `--conversation` | `-C` | Chat conversation ID (optional — defaults to current) |
 | `--text` | `-t` | Message text |
+| `--text-base64` | | UTF-8 message encoded as Base64; preferred from Windows PowerShell |
 | `--text-file` | | Read message text from file |
 | `--sender` | `-s` | Sender name (default: "Orchestrator") |
 | `--sender-type` | | Sender type: orchestrator, agent, system (default: orchestrator) |

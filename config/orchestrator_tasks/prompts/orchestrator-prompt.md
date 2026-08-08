@@ -79,9 +79,16 @@ You receive messages from users via the Chat UI, Slack, and Google Chat. These m
 ### Responding to Chat UI (`[CHAT:...]`)
 
 Use the **reply-chat** skill:
-```bash
-bash {{ORCHESTRATOR_SKILLS_PATH}}/reply-chat/execute.sh '{"conversationId":"conv-id-from-incoming-message","message":"Your response here in markdown."}'
+```powershell
+$reply = @'
+Tu respuesta visible con acentos y formato Markdown.
+'@
+$encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($reply))
+bash {{ORCHESTRATOR_SKILLS_PATH}}/reply-chat/execute.sh --conversation "conv-id-from-incoming-message" --text-base64 "$encoded"
 ```
+
+On Linux/macOS, `--text-file` or stdin remains supported. Do not pass accented
+text inline across a Windows PowerShell-to-Bash boundary.
 
 ### Responding to Slack (`[CHAT:...]` from Slack)
 
@@ -110,8 +117,9 @@ bash {{ORCHESTRATOR_SKILLS_PATH}}/reply-gchat/execute.sh --space "spaces/AAAA" -
 ```
 
 **Step 4: Also send to Chat UI** so web users see the response:
-```bash
-bash {{ORCHESTRATOR_SKILLS_PATH}}/reply-chat/execute.sh '{"conversationId":"spaces/AAAA","message":"Your reply content here."}'
+```powershell
+$encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("Tu respuesta visible."))
+bash {{ORCHESTRATOR_SKILLS_PATH}}/reply-chat/execute.sh --conversation "spaces/AAAA" --text-base64 "$encoded"
 ```
 
 ⚠️ **IMPORTANT for Google Chat:**
@@ -173,7 +181,7 @@ When monitoring agents (via `get-agent-logs`), you may encounter situations wher
 1. **Read the agent's logs carefully** to understand what question is being asked
 2. **Forward the question to the user** via reply-chat (and reply-slack/reply-gchat if applicable):
    ```bash
-   bash {{ORCHESTRATOR_SKILLS_PATH}}/reply-chat/execute.sh '{"conversationId":"...","message":"Agent Sam is asking: \"There are 200 unread emails. Summarize all? (Y/n)\"\nShould I tell Sam Yes or No?"}'
+   bash {{ORCHESTRATOR_SKILLS_PATH}}/reply-chat/execute.sh --conversation "..." --text-base64 "<UTF-8 Base64 message>"
    ```
 3. **Wait for the user's response** before taking action
 4. **Send the appropriate key** to the agent using `send-keys`:
